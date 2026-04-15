@@ -32,26 +32,5 @@ class Participant {
     public function setPhone($phone)               { $this->phone = $phone; }
     public function setEventId($eventId)           { $this->eventId = $eventId; }
     public function setRegisteredAt($registeredAt) { $this->registeredAt = $registeredAt; }
-
-    public function show() {
-        echo '<table border="1">';
-        echo '<tr>
-        <th>ID</th>
-        <th>Nom complet</th>
-        <th>Email</th>
-        <th>Téléphone</th>
-        <th>Événement</th>
-        <th>Date inscription</th>
-        </tr>';
-        echo '<tr>';
-        echo '<td>' . $this->getId()           . '</td>';
-        echo '<td>' . $this->getFullName()     . '</td>';
-        echo '<td>' . $this->getEmail()        . '</td>';
-        echo '<td>' . $this->getPhone()        . '</td>';
-        echo '<td>' . $this->getEventId()      . '</td>';
-        echo '<td>' . $this->getRegisteredAt() . '</td>';
-        echo '</tr>';
-        echo '</table>';
-    }
 }
 ?>

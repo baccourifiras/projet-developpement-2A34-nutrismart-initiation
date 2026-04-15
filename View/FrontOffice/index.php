@@ -98,7 +98,7 @@
         </article>
         <article class="info-card">
           <h3>Expérience simple</h3>
-          <p>Le front office affiche les catégories et les événements, alors que le backoffice permet d'ajouter de nouvelles catégories et de nouveaux événements visibles immédiatement.</p>
+          <p>cette page affiche les catégories et les événements, alors que le Dashboard permet d'ajouter de nouvelles catégories et de nouveaux événements visibles immédiatement.</p>
         </article>
       </div>
       <p class="conclusion"><strong>Conclusion :</strong> NutriSmart est une application moderne qui relie nutrition, régimes et événements de sensibilisation pour offrir une plateforme simple, claire et utile.</p>
@@ -110,19 +110,19 @@
       <button class="close-btn" id="closeModalBtn">×</button>
       <h3>Participer à l'événement</h3>
       <p id="selectedEventText" class="selected-event"></p>
-      <form id="participantForm" class="form-grid">
-        <input type="hidden" id="participantEventId" />
+      <form id="participantForm" class="form-grid" method="POST" action="../../Controller/NutrismartController.php?action=addParticipant">
+        <input type="hidden" id="participantEventId" name="eventId" />
         <div>
           <label for="fullName">Nom complet</label>
-          <input id="fullName" required type="text" placeholder="Votre nom" />
+          <input id="fullName" name="fullName" required type="text" placeholder="Votre nom" />
         </div>
         <div>
           <label for="email">Email</label>
-          <input id="email" required type="email" placeholder="votre@email.com" />
+          <input id="email" name="email" required type="email" placeholder="votre@email.com" />
         </div>
         <div>
           <label for="phone">Téléphone</label>
-          <input id="phone" required type="text" placeholder="22 111 222" />
+          <input id="phone" name="phone" required type="text" placeholder="22 111 222" />
         </div>
         <button type="submit" class="primary-btn">Valider la participation</button>
       </form>
@@ -130,7 +130,7 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=20260415-iife"></script>
   <script>
     /* =====================================================
        NAVBAR — animations et comportement au scroll

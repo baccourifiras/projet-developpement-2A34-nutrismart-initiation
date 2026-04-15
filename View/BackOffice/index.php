@@ -17,7 +17,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NutriSmart - Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260415-toast" />
 </head>
 <body>
   <aside class="sidebar">
@@ -43,9 +43,6 @@
       <a href="../frontoffice/index.php">Voir Front Office</a>
     </nav>
 
-    <div class="sidebar-footer">
-      <button id="resetDataBtn" class="danger-btn">Réinitialiser les données</button>
-    </div>
   </aside>
 
   <main class="main content">
@@ -77,14 +74,14 @@
           <h2>Ajouter une nouvelle catégorie</h2>
         </div>
       </div>
-      <form id="categoryForm" class="form-grid two-columns">
+      <form id="categoryForm" class="form-grid two-columns" method="POST" action="../../Controller/NutrismartController.php?action=addCategory">
         <div>
           <label for="categoryName">Nom de la catégorie</label>
-          <input id="categoryName" required type="text" placeholder="Ex : Nutrition sportive" />
+          <input id="categoryName" name="name" required type="text" placeholder="Ex : Nutrition sportive" />
         </div>
         <div>
           <label for="categoryDescription">Description</label>
-          <input id="categoryDescription" type="text" placeholder="Courte description" />
+          <input id="categoryDescription" name="description" type="text" placeholder="Courte description" />
         </div>
         <button class="primary-btn" type="submit">Ajouter la catégorie</button>
       </form>
@@ -98,38 +95,38 @@
           <h2>Ajouter un nouvel événement</h2>
         </div>
       </div>
-      <form id="eventForm" class="form-grid two-columns">
+      <form id="eventForm" class="form-grid two-columns" method="POST" action="../../Controller/NutrismartController.php?action=addEvent">
         <div>
           <label for="eventTitle">Titre</label>
-          <input id="eventTitle" required type="text" placeholder="Nom de l'événement" />
+          <input id="eventTitle" name="title" required type="text" placeholder="Nom de l'événement" />
         </div>
         <div>
           <label for="eventCategory">Catégorie</label>
-          <select id="eventCategory" required></select>
+          <select id="eventCategory" name="categoryId" required></select>
         </div>
         <div>
           <label for="eventDate">Date</label>
-          <input id="eventDate" required type="date" />
+          <input id="eventDate" name="date" required type="date" />
         </div>
         <div>
           <label for="eventTime">Heure</label>
-          <input id="eventTime" required type="time" />
+          <input id="eventTime" name="time" required type="time" />
         </div>
         <div>
           <label for="eventLocation">Lieu</label>
-          <input id="eventLocation" required type="text" placeholder="Lieu" />
+          <input id="eventLocation" name="location" required type="text" placeholder="Lieu" />
         </div>
         <div>
           <label for="eventSeats">Nombre de places</label>
-          <input id="eventSeats" required type="number" min="1" placeholder="50" />
+          <input id="eventSeats" name="seats" required type="number" min="1" placeholder="50" />
         </div>
         <div class="full-width">
           <label for="eventDescription">Description</label>
-          <textarea id="eventDescription" required rows="4" placeholder="Description de l'événement"></textarea>
+          <textarea id="eventDescription" name="description" required rows="4" placeholder="Description de l'événement"></textarea>
         </div>
         <div class="full-width">
           <label for="eventImage">Image URL</label>
-          <input id="eventImage" type="url" placeholder="https://..." />
+          <input id="eventImage" name="image" type="url" placeholder="https://..." />
         </div>
         <button class="primary-btn" type="submit">Ajouter l'événement</button>
       </form>
@@ -147,6 +144,6 @@
     </section>
   </main>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=20260415-toast"></script>
 </body>
 </html>

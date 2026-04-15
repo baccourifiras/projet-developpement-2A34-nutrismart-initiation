@@ -1,83 +1,70 @@
 /* ============================================================
    NutriSmart — Backoffice script.js
    Ce fichier gère TOUT le backoffice :
-     1. Les données par défaut
-     2. La lecture / écriture (localStorage — temporaire)
+     1. La lecture / écriture avec MySQL via PHP
      3. Ajouter / Modifier / Supprimer : Catégories, Événements, Participants
      4. Affichage des tableaux
      5. Les modals (modification + confirmation suppression)
-
-   NOTE IMPORTANTE : Pour l'instant les données sont stockées dans
-   le localStorage du navigateur. Quand le projet sera connecté à
-   une base de données MySQL + PHP, il suffira de remplacer les
-   fonctions lireDonnees() et sauvegarder() par des appels fetch()
-   vers les fichiers PHP.
    ============================================================ */
 
 
+(function () {
+
 /* ------------------------------------------------------------
-   SECTION 1 : DONNÉES PAR DÉFAUT
-   Chargées uniquement à la première ouverture du site.
+   SECTION 1 : DONNÉES
    ------------------------------------------------------------ */
 
-var donneesCategories = [
-  { id: 1, name: 'Nutrition sportive',  description: 'Événements pour améliorer les performances sportives grâce à une alimentation adaptée.' },
-  { id: 2, name: 'Régime minceur',      description: 'Ateliers et conférences pour la perte de poids et le rééquilibrage alimentaire.' },
-  { id: 3, name: 'Alimentation saine',  description: 'Conseils pratiques pour adopter une nutrition équilibrée au quotidien.' }
-];
-
-var donneesEvenements = [
-  { id: 1, title: 'Atelier repas équilibré',       description: 'Un atelier pratique pour apprendre à composer des repas sains.',             date: '2026-05-12', time: '10:00', location: 'Tunis',  categoryId: 3, seats: 30, image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80' },
-  { id: 2, title: 'Conférence nutrition sportive',  description: "Une conférence dédiée à la nutrition avant et après l'activité physique.",   date: '2026-05-18', time: '14:00', location: 'Sfax',   categoryId: 1, seats: 50, image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80' },
-  { id: 3, title: 'Journée régime minceur',         description: "Une journée d'accompagnement avec des conseils sur le régime minceur.",      date: '2026-05-22', time: '09:30', location: 'Sousse', categoryId: 2, seats: 40, image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80' }
-];
-
-var donneesParticipants = [
-  { id: 1, fullName: 'Amine Abidi', email: 'amine@example.com', phone: '22111222', eventId: 1, registeredAt: '2026-04-09' }
-];
+var API_URL = '/nutrismart_evenement/Controller/NutrismartController.php';
+var donneesCategories = [];
+var donneesEvenements = [];
+var donneesParticipants = [];
 
 
 /* ------------------------------------------------------------
-   SECTION 2 : LECTURE ET ÉCRITURE (localStorage)
-
-   localStorage = stockage dans le navigateur.
-   Les données restent tant que l'utilisateur ne vide pas le cache.
-
-   ⚠️  ATTENTION : Si vous ouvrez le fichier .html directement
-   depuis votre ordinateur (sans serveur), les données sont bien
-   sauvegardées dans votre navigateur. Mais si vous changez de
-   navigateur ou videz le cache, elles disparaissent.
-
-   🔜  FUTURE CONNEXION PHP/MySQL :
-   Remplacer lireDonnees() par : fetch('api/categories.php')
-   Remplacer sauvegarder() par : fetch('api/save.php', {method:'POST', body:...})
+   SECTION 2 : LECTURE ET ÉCRITURE (PHP/MySQL)
    ------------------------------------------------------------ */
 
-// Lire les données depuis localStorage
-// Si la clé n'existe pas → première visite → on sauvegarde les données par défaut
-function lireDonnees(cle, defaut) {
-  var stocke = localStorage.getItem(cle);
-  if (stocke === null) {
-    localStorage.setItem(cle, JSON.stringify(defaut));
-    return JSON.parse(JSON.stringify(defaut));
-  }
-  return JSON.parse(stocke);
+function appliquerDonnees(data) {
+  donneesCategories = data.categories || [];
+  donneesEvenements = data.events || [];
+  donneesParticipants = data.participants || [];
+
+  donneesCategories.forEach(function(c) {
+    c.id = Number(c.id);
+  });
+  donneesEvenements.forEach(function(e) {
+    e.id = Number(e.id);
+    e.categoryId = Number(e.categoryId);
+    e.seats = Number(e.seats || 0);
+  });
+  donneesParticipants.forEach(function(p) {
+    p.id = Number(p.id);
+    p.eventId = Number(p.eventId);
+  });
 }
 
-// Écrire les données dans localStorage
-function sauvegarder(cle, valeur) {
-  localStorage.setItem(cle, JSON.stringify(valeur));
+async function api(action, data) {
+  var options = action === 'all'
+    ? {}
+    : {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data || {})
+      };
+
+  var response = await fetch(API_URL + '?action=' + encodeURIComponent(action), options);
+  var json = await response.json();
+  if (!response.ok) {
+    throw new Error(json.error || 'Erreur serveur');
+  }
+  appliquerDonnees(json);
+  return json;
 }
 
 // Raccourcis pour accéder à chaque collection
-function getCategories()   { return lireDonnees('nutrismart_categories',   donneesCategories);   }
-function getEvenements()   { return lireDonnees('nutrismart_events',       donneesEvenements);   }
-function getParticipants() { return lireDonnees('nutrismart_participants', donneesParticipants); }
-
-// Génère un nouvel ID unique = plus grand ID existant + 1
-function nouvelId(liste) {
-  return liste.reduce(function(max, item) { return Math.max(max, item.id || 0); }, 0) + 1;
-}
+function getCategories()   { return donneesCategories;   }
+function getEvenements()   { return donneesEvenements;   }
+function getParticipants() { return donneesParticipants; }
 
 // Retourne le nom d'une catégorie depuis son ID
 function getNomCategorie(id) {
@@ -93,6 +80,7 @@ function getTitreEvenement(id) {
 
 // Formate une date ISO en français (ex: "2026-05-12" → "12 mai 2026")
 function formaterDate(dateStr) {
+  if (!dateStr) return '-';
   return new Intl.DateTimeFormat('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(dateStr));
 }
 
@@ -101,34 +89,49 @@ function badgeId(id) {
   return '<span class="id-badge">' + (Number(id) || '-') + '</span>';
 }
 
+function afficherMessageSucces(type, titre, message) {
+  var ancien = document.getElementById('successToast');
+  if (ancien) ancien.remove();
+
+  var icones = {
+    add: '+',
+    edit: '✓',
+    delete: '×'
+  };
+
+  var toast = document.createElement('div');
+  toast.id = 'successToast';
+  toast.className = 'success-toast ' + type;
+  toast.innerHTML =
+    '<span class="toast-icon">' + (icones[type] || '✓') + '</span>' +
+    '<span class="toast-content">' +
+      '<strong>' + titre + '</strong>' +
+      '<small>' + message + '</small>' +
+    '</span>' +
+    '<span class="toast-progress"></span>';
+  document.body.appendChild(toast);
+
+  setTimeout(function() {
+    toast.classList.add('hide');
+  }, 2200);
+  setTimeout(function() {
+    if (toast.parentNode) toast.remove();
+  }, 2700);
+}
+
 
 /* ------------------------------------------------------------
    SECTION 3 : AJOUTER
 
-   Ces fonctions ajoutent un nouvel élément dans localStorage.
-   🔜 PHP : remplacer par fetch('api/ajouter_categorie.php', ...)
+   Ces fonctions ajoutent un nouvel élément dans MySQL.
    ------------------------------------------------------------ */
 
-function ajouterCategorie(data) { 
-  var liste = getCategories();
-  liste.push({ id: nouvelId(liste), name: data.name, description: data.description || '' });
-  sauvegarder('nutrismart_categories', liste);
+async function ajouterCategorie(data) { 
+  await api('addCategory', data);
 }
 
-function ajouterEvenement(data) {
-  var liste = getEvenements();
-  liste.push({
-    id: nouvelId(liste),
-    title:       data.title,
-    description: data.description,
-    date:        data.date,
-    time:        data.time,
-    location:    data.location,
-    categoryId:  Number(data.categoryId),
-    seats:       Number(data.seats),
-    image:       data.image || 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80'
-  });
-  sauvegarder('nutrismart_events', liste);
+async function ajouterEvenement(data) {
+  await api('addEvent', data);
 }
 
 
@@ -136,42 +139,21 @@ function ajouterEvenement(data) {
    SECTION 4 : MODIFIER
 
    Ces fonctions trouvent un élément par son ID et le mettent à jour.
-   🔜 PHP : remplacer par fetch('api/modifier_categorie.php', ...)
    ------------------------------------------------------------ */
 
-function modifierCategorie(id, data) {
-  var liste = getCategories();
-  var index = liste.findIndex(function(c) { return c.id === Number(id); });
-  if (index === -1) return; // ID introuvable
-  liste[index].name= data.name;
-  liste[index].description = data.description || '';
-  sauvegarder('nutrismart_categories', liste);
+async function modifierCategorie(id, data) {
+  data.id = Number(id);
+  await api('updateCategory', data);
 }
 
-function modifierEvenement(id, data) {
-  var liste = getEvenements();
-  var index = liste.findIndex(function(e) { return e.id === Number(id); });
-  if (index === -1) return;
-  liste[index].title       = data.title;
-  liste[index].description = data.description;
-  liste[index].date        = data.date;
-  liste[index].time        = data.time;
-  liste[index].location    = data.location;
-  liste[index].categoryId  = Number(data.categoryId);
-  liste[index].seats       = Number(data.seats);
-  liste[index].image       = data.image || liste[index].image;
-  sauvegarder('nutrismart_events', liste);
+async function modifierEvenement(id, data) {
+  data.id = Number(id);
+  await api('updateEvent', data);
 }
 
-function modifierParticipant(id, data) {
-  var liste = getParticipants();
-  var index = liste.findIndex(function(p) { return p.id === Number(id); });
-  if (index === -1) return;
-  liste[index].fullName = data.fullName;
-  liste[index].email    = data.email;
-  liste[index].phone    = data.phone;
-  liste[index].eventId  = Number(data.eventId);
-  sauvegarder('nutrismart_participants', liste);
+async function modifierParticipant(id, data) {
+  data.id = Number(id);
+  await api('updateParticipant', data);
 }
 
 
@@ -180,51 +162,18 @@ function modifierParticipant(id, data) {
 
    La suppression d'une catégorie supprime aussi ses événements
    et les participants de ces événements (cascade).
-   🔜 PHP : remplacer par fetch('api/supprimer_categorie.php', ...)
    ------------------------------------------------------------ */
 
-function supprimerCategorie(id) {
-  id = Number(id);
-
-  // Trouver les IDs des événements liés à cette catégorie
-  var idsEvenements = getEvenements()
-    .filter(function(e) { return e.categoryId === id; })
-    .map(function(e) { return e.id; });
-
-  // Supprimer les participants de ces événements
-  sauvegarder('nutrismart_participants',
-    getParticipants().filter(function(p) { return !idsEvenements.includes(p.eventId); })
-  );
-
-  // Supprimer les événements de cette catégorie
-  sauvegarder('nutrismart_events',
-    getEvenements().filter(function(e) { return e.categoryId !== id; })
-  );
-
-  // Supprimer la catégorie elle-même
-  sauvegarder('nutrismart_categories',
-    getCategories().filter(function(c) { return c.id !== id; })
-  );
+async function supprimerCategorie(id) {
+  await api('deleteCategory', { id: Number(id) });
 }
 
-function supprimerEvenement(id) {
-  id = Number(id);
-
-  // Supprimer les participants de cet événement
-  sauvegarder('nutrismart_participants',
-    getParticipants().filter(function(p) { return p.eventId !== id; })
-  );
-
-  // Supprimer l'événement
-  sauvegarder('nutrismart_events',
-    getEvenements().filter(function(e) { return e.id !== id; })
-  );
+async function supprimerEvenement(id) {
+  await api('deleteEvent', { id: Number(id) });
 }
 
-function supprimerParticipant(id) {
-  sauvegarder('nutrismart_participants',
-    getParticipants().filter(function(p) { return p.id !== Number(id); })
-  );
+async function supprimerParticipant(id) {
+  await api('deleteParticipant', { id: Number(id) });
 }
 
 
@@ -334,10 +283,15 @@ function afficherConfirmSuppression(message, fonctionSupprimer) {
   document.body.appendChild(modal);
 
   // Clic "Supprimer" → exécute la fonction passée en paramètre
-  document.getElementById('confirmerSuppr').addEventListener('click', function() {
-    fonctionSupprimer();
-    modal.remove();
-    toutRafraichir();
+  document.getElementById('confirmerSuppr').addEventListener('click', async function() {
+    try {
+      await fonctionSupprimer();
+      modal.remove();
+      toutRafraichir();
+      afficherMessageSucces('delete', 'Suppression réussie', 'Les données ont été retirées de la base.');
+    } catch (error) {
+      alert(error.message);
+    }
   });
 
   // Clic "Annuler" ou sur le fond → fermer
@@ -373,13 +327,18 @@ function afficherModalModifCategorie(id) {
     '</div>';
   document.body.appendChild(modal);
 
-  document.getElementById('sauvegarderModif').addEventListener('click', function() {
-    modifierCategorie(id, {
-      name:        document.getElementById('mCatNom').value.trim(),
-      description: document.getElementById('mCatDesc').value.trim()
-    });
-    modal.remove();
-    toutRafraichir();
+  document.getElementById('sauvegarderModif').addEventListener('click', async function() {
+    try {
+      await modifierCategorie(id, {
+        name:        document.getElementById('mCatNom').value.trim(),
+        description: document.getElementById('mCatDesc').value.trim()
+      });
+      modal.remove();
+      toutRafraichir();
+      afficherMessageSucces('edit', 'Modification enregistrée', 'Les changements sont sauvegardés.');
+    } catch (error) {
+      alert(error.message);
+    }
   });
   document.getElementById('annulerModif').addEventListener('click', function() { modal.remove(); });
 }
@@ -421,19 +380,24 @@ function afficherModalModifEvenement(id) {
     '</div>';
   document.body.appendChild(modal);
 
-  document.getElementById('sauvegarderModif').addEventListener('click', function() {
-    modifierEvenement(id, {
-      title:       document.getElementById('mEvTitre').value.trim(),
-      categoryId:  document.getElementById('mEvCat').value,
-      date:        document.getElementById('mEvDate').value,
-      time:        document.getElementById('mEvHeure').value,
-      location:    document.getElementById('mEvLieu').value.trim(),
-      seats:       document.getElementById('mEvPlaces').value,
-      description: document.getElementById('mEvDesc').value.trim(),
-      image:       document.getElementById('mEvImage').value.trim()
-    });
-    modal.remove();
-    toutRafraichir();
+  document.getElementById('sauvegarderModif').addEventListener('click', async function() {
+    try {
+      await modifierEvenement(id, {
+        title:       document.getElementById('mEvTitre').value.trim(),
+        categoryId:  document.getElementById('mEvCat').value,
+        date:        document.getElementById('mEvDate').value,
+        time:        document.getElementById('mEvHeure').value,
+        location:    document.getElementById('mEvLieu').value.trim(),
+        seats:       document.getElementById('mEvPlaces').value,
+        description: document.getElementById('mEvDesc').value.trim(),
+        image:       document.getElementById('mEvImage').value.trim()
+      });
+      modal.remove();
+      toutRafraichir();
+      afficherMessageSucces('edit', 'Modification enregistrée', 'Les changements sont sauvegardés.');
+    } catch (error) {
+      alert(error.message);
+    }
   });
   document.getElementById('annulerModif').addEventListener('click', function() { modal.remove(); });
 }
@@ -471,15 +435,20 @@ function afficherModalModifParticipant(id) {
     '</div>';
   document.body.appendChild(modal);
 
-  document.getElementById('sauvegarderModif').addEventListener('click', function() {
-    modifierParticipant(id, {
-      fullName: document.getElementById('mPNom').value.trim(),
-      email:    document.getElementById('mPEmail').value.trim(),
-      phone:    document.getElementById('mPTel').value.trim(),
-      eventId:  document.getElementById('mPEvent').value
-    });
-    modal.remove();
-    toutRafraichir();
+  document.getElementById('sauvegarderModif').addEventListener('click', async function() {
+    try {
+      await modifierParticipant(id, {
+        fullName: document.getElementById('mPNom').value.trim(),
+        email:    document.getElementById('mPEmail').value.trim(),
+        phone:    document.getElementById('mPTel').value.trim(),
+        eventId:  document.getElementById('mPEvent').value
+      });
+      modal.remove();
+      toutRafraichir();
+      afficherMessageSucces('edit', 'Modification enregistrée', 'Les changements sont sauvegardés.');
+    } catch (error) {
+      alert(error.message);
+    }
   });
   document.getElementById('annulerModif').addEventListener('click', function() { modal.remove(); });
 }
@@ -522,43 +491,42 @@ function toutRafraichir() {
    ------------------------------------------------------------ */
 
 // Formulaire : ajouter une catégorie
-document.getElementById('categoryForm').addEventListener('submit', function(e) {
+document.getElementById('categoryForm').addEventListener('submit', async function(e) {
   e.preventDefault();
-  ajouterCategorie({
-    name:        document.getElementById('categoryName').value.trim(),
-    description: document.getElementById('categoryDescription').value.trim()
-  });
-  this.reset();
-  toutRafraichir();
-});
-
-// Formulaire : ajouter un événement
-document.getElementById('eventForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  ajouterEvenement({
-    title:       document.getElementById('eventTitle').value.trim(),
-    categoryId:  document.getElementById('eventCategory').value,
-    date:        document.getElementById('eventDate').value,
-    time:        document.getElementById('eventTime').value,
-    location:    document.getElementById('eventLocation').value.trim(),
-    seats:       document.getElementById('eventSeats').value,
-    description: document.getElementById('eventDescription').value.trim(),
-    image:       document.getElementById('eventImage').value.trim()
-  });
-  this.reset();
-  toutRafraichir();
-});
-
-// Bouton : réinitialiser toutes les données aux valeurs par défaut
-document.getElementById('resetDataBtn').addEventListener('click', function() {
-  if (confirm('Réinitialiser toutes les données aux valeurs par défaut ?')) {
-    sauvegarder('nutrismart_categories',   donneesCategories);
-    sauvegarder('nutrismart_events',       donneesEvenements);
-    sauvegarder('nutrismart_participants', donneesParticipants);
+  try {
+    await ajouterCategorie({
+      name:        document.getElementById('categoryName').value.trim(),
+      description: document.getElementById('categoryDescription').value.trim()
+    });
+    this.reset();
     toutRafraichir();
+    afficherMessageSucces('add', 'Ajout réussi', 'La catégorie est ajoutée à la base.');
+  } catch (error) {
+    alert(error.message);
   }
 });
 
+// Formulaire : ajouter un événement
+document.getElementById('eventForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  try {
+    await ajouterEvenement({
+      title:       document.getElementById('eventTitle').value.trim(),
+      categoryId:  document.getElementById('eventCategory').value,
+      date:        document.getElementById('eventDate').value,
+      time:        document.getElementById('eventTime').value,
+      location:    document.getElementById('eventLocation').value.trim(),
+      seats:       document.getElementById('eventSeats').value,
+      description: document.getElementById('eventDescription').value.trim(),
+      image:       document.getElementById('eventImage').value.trim()
+    });
+    this.reset();
+    toutRafraichir();
+    afficherMessageSucces('add', 'Ajout réussi', 'L’événement est ajouté à la base.');
+  } catch (error) {
+    alert(error.message);
+  }
+});
 
 /* ------------------------------------------------------------
    SECTION 10 : MENU ACTIF AU SCROLL
@@ -584,5 +552,23 @@ function initMenuActif() {
 /* ------------------------------------------------------------
    DÉMARRAGE : initialiser la page
    ------------------------------------------------------------ */
-toutRafraichir();
-initMenuActif();
+async function initialiserBackOffice() {
+  try {
+    await api('all');
+    toutRafraichir();
+    initMenuActif();
+  } catch (error) {
+    alert('Impossible de charger la base de données : ' + error.message);
+  }
+}
+
+window.afficherConfirmSuppression = afficherConfirmSuppression;
+window.afficherModalModifCategorie = afficherModalModifCategorie;
+window.afficherModalModifEvenement = afficherModalModifEvenement;
+window.afficherModalModifParticipant = afficherModalModifParticipant;
+window.supprimerCategorie = supprimerCategorie;
+window.supprimerEvenement = supprimerEvenement;
+window.supprimerParticipant = supprimerParticipant;
+
+initialiserBackOffice();
+})();

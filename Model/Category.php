@@ -21,19 +21,5 @@ class Category {
     public function setName($name)               { $this->name = $name; }
     public function setDescription($description) { $this->description = $description; }
 
-    public function show() {
-        echo '<table border="1">';
-        echo '<tr>
-        <th>ID</th>
-        <th>Nom</th>
-        <th>Description</th>
-        </tr>';
-        echo '<tr>';
-        echo '<td>' . $this->getId()          . '</td>';
-        echo '<td>' . $this->getName()        . '</td>';
-        echo '<td>' . $this->getDescription() . '</td>';
-        echo '</tr>';
-        echo '</table>';
-    }
 }
 ?>

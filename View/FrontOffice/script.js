@@ -1,72 +1,71 @@
 /* ============================================================
    NutriSmart — Front Office
    Ce fichier gère :
-     1. La lecture/écriture des données (localStorage)
+     1. La lecture/écriture des données avec MySQL via PHP
      2. L'affichage des catégories
      3. L'affichage des événements
      4. L'inscription d'un participant
    ============================================================ */
 
 
+(function () {
+
 /* ------------------------------------------------------------
-   SECTION 1 : DONNÉES PAR DÉFAUT
-   Ces données sont chargées la PREMIÈRE fois seulement.
-   Après, c'est le localStorage qui prend le relais.
+   SECTION 1 : DONNÉES
    ------------------------------------------------------------ */
 
-var donneesCategories = [
-  { id: 1, name: 'Nutrition sportive', description: 'Événements pour améliorer les performances sportives grâce à une alimentation adaptée.' },
-  { id: 2, name: 'Régime minceur',     description: 'Ateliers et conférences pour la perte de poids et le rééquilibrage alimentaire.' },
-  { id: 3, name: 'Alimentation saine', description: 'Conseils pratiques pour adopter une nutrition équilibrée au quotidien.' }
-];
-
-var donneesEvenements = [
-  { id: 1, title: 'Atelier repas équilibré',      description: 'Un atelier pratique pour apprendre à composer des repas sains.', date: '2026-05-12', time: '10:00', location: 'Tunis',  categoryId: 3, seats: 30, image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80' },
-  { id: 2, title: 'Conférence nutrition sportive', description: 'Une conférence dédiée à la nutrition avant et après le sport.',   date: '2026-05-18', time: '14:00', location: 'Sfax',   categoryId: 1, seats: 50, image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80' },
-  { id: 3, title: 'Journée régime minceur',        description: 'Une journée de conseils sur le régime minceur et les bonnes habitudes.', date: '2026-05-22', time: '09:30', location: 'Sousse', categoryId: 2, seats: 40, image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80' }
-];
-
-var donneesParticipants = [
-  { id: 1, fullName: 'Amine Abidi', email: 'amine@example.com', phone: '22111222', eventId: 1, registeredAt: '2026-04-09' }
-];
+var API_URL = '/nutrismart_evenement/Controller/NutrismartController.php';
+var DEFAULT_EVENT_IMAGE = 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80';
+var donneesCategories = [];
+var donneesEvenements = [];
+var donneesParticipants = [];
 
 
 /* ------------------------------------------------------------
-   SECTION 2 : LECTURE ET ÉCRITURE (localStorage)
-
-   localStorage = stockage dans le navigateur.
-   Les données restent même si on ferme l'onglet ou le navigateur.
-
-   IMPORTANT : Pour l'instant c'est localStorage (côté client).
-   Plus tard, ces fonctions seront remplacées par des appels PHP/MySQL.
+   SECTION 2 : LECTURE ET ÉCRITURE (PHP/MySQL)
    ------------------------------------------------------------ */
 
-// Lire les données depuis localStorage
-// Si elles n'existent pas encore → on sauvegarde et retourne les données par défaut
-function lireDonnees(cle, defaut) {
-  var stocke = localStorage.getItem(cle);
-  if (stocke === null) {
-    // Première visite : on initialise avec les données par défaut
-    localStorage.setItem(cle, JSON.stringify(defaut));
-    return JSON.parse(JSON.stringify(defaut));
-  }
-  return JSON.parse(stocke);
+function appliquerDonnees(data) {
+  donneesCategories = data.categories || [];
+  donneesEvenements = data.events || [];
+  donneesParticipants = data.participants || [];
+
+  donneesCategories.forEach(function(c) {
+    c.id = Number(c.id);
+  });
+  donneesEvenements.forEach(function(e) {
+    e.id = Number(e.id);
+    e.categoryId = Number(e.categoryId);
+    e.seats = Number(e.seats || 0);
+  });
+  donneesParticipants.forEach(function(p) {
+    p.id = Number(p.id);
+    p.eventId = Number(p.eventId);
+  });
 }
 
-// Écrire/mettre à jour les données dans localStorage
-function sauvegarder(cle, valeur) {
-  localStorage.setItem(cle, JSON.stringify(valeur));
+async function api(action, data) {
+  var options = action === 'all'
+    ? {}
+    : {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data || {})
+      };
+
+  var response = await fetch(API_URL + '?action=' + encodeURIComponent(action), options);
+  var json = await response.json();
+  if (!response.ok) {
+    throw new Error(json.error || 'Erreur serveur');
+  }
+  appliquerDonnees(json);
+  return json;
 }
 
 // Raccourcis pour lire chaque collection
-function getCategories()   { return lireDonnees('nutrismart_categories',   donneesCategories);   }
-function getEvenements()   { return lireDonnees('nutrismart_events',       donneesEvenements);   }
-function getParticipants() { return lireDonnees('nutrismart_participants', donneesParticipants); }
-
-// Générer un nouvel ID unique (prend le plus grand ID existant + 1)
-function nouvelId(liste) {
-  return liste.reduce(function(max, item) { return Math.max(max, item.id || 0); }, 0) + 1;
-}
+function getCategories()   { return donneesCategories;   }
+function getEvenements()   { return donneesEvenements;   }
+function getParticipants() { return donneesParticipants; }
 
 
 /* ------------------------------------------------------------
@@ -86,6 +85,7 @@ function getNbParticipants(eventId) {
 
 // Formate une date (ex: "2026-05-12" → "12 mai 2026")
 function formaterDate(dateStr) {
+  if (!dateStr) return '-';
   return new Intl.DateTimeFormat('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(dateStr));
 }
 
@@ -176,8 +176,9 @@ function afficherEvenements() {
     var carte = document.createElement('article');
     carte.className = 'event-card reveal';
     carte.style.transitionDelay = (index * 90) + 'ms';
+    var image = ev.image && ev.image.trim() ? ev.image.trim() : DEFAULT_EVENT_IMAGE;
     carte.innerHTML =
-      '<img class="event-image" src="' + ev.image + '" alt="' + ev.title + '">' +
+      '<img class="event-image" src="' + image + '" alt="' + ev.title + '" onerror="this.onerror=null;this.src=\'' + DEFAULT_EVENT_IMAGE + '\'">' +
       '<div class="event-content">' +
         '<span class="event-badge">' + getNomCategorie(ev.categoryId) + '</span>' +
         '<h3>' + ev.title + '</h3>' +
@@ -237,24 +238,23 @@ document.getElementById('registerModal').addEventListener('click', function(e) {
 });
 
 // Soumettre le formulaire d'inscription
-document.getElementById('participantForm').addEventListener('submit', function(e) {
+document.getElementById('participantForm').addEventListener('submit', async function(e) {
   e.preventDefault();
 
-  // Ajouter le nouveau participant dans localStorage
-  var participants = getParticipants();
-  participants.push({
-    id:           nouvelId(participants),
-    fullName:     document.getElementById('fullName').value.trim(),
-    email:        document.getElementById('email').value.trim(),
-    phone:        document.getElementById('phone').value.trim(),
-    eventId:      Number(document.getElementById('participantEventId').value),
-    registeredAt: new Date().toISOString().slice(0, 10)
-  });
-  sauvegarder('nutrismart_participants', participants);
+  try {
+    await api('addParticipant', {
+      fullName: document.getElementById('fullName').value.trim(),
+      email:    document.getElementById('email').value.trim(),
+      phone:    document.getElementById('phone').value.trim(),
+      eventId:  Number(document.getElementById('participantEventId').value)
+    });
 
-  document.getElementById('messageBox').textContent = 'Participation enregistrée avec succès !';
-  afficherEvenements();
-  setTimeout(fermerModal, 1000);
+    document.getElementById('messageBox').textContent = 'Participation enregistrée avec succès !';
+    afficherEvenements();
+    setTimeout(fermerModal, 1000);
+  } catch (error) {
+    document.getElementById('messageBox').textContent = error.message;
+  }
 });
 
 
@@ -283,6 +283,17 @@ function activerAnimations() {
 /* ------------------------------------------------------------
    DÉMARRAGE : afficher les données au chargement de la page
    ------------------------------------------------------------ */
-afficherCategories();
-afficherEvenements();
-activerAnimations();
+async function initialiserFrontOffice() {
+  try {
+    await api('all');
+    afficherCategories();
+    afficherEvenements();
+    activerAnimations();
+  } catch (error) {
+    document.getElementById('categoryList').innerHTML = '<div class="no-data visible">Impossible de charger la base de données.</div>';
+    document.getElementById('eventList').innerHTML = '<div class="no-data visible">' + error.message + '</div>';
+  }
+}
+
+initialiserFrontOffice();
+})();

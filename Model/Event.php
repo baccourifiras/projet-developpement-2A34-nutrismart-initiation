@@ -44,32 +44,5 @@ class Event {
     public function setCategoryId($categoryId)   { $this->categoryId = $categoryId; }
     public function setSeats($seats)             { $this->seats = $seats; }
     public function setImage($image)             { $this->image = $image; }
-
-    public function show() {
-        echo '<table border="1">';
-        echo '<tr>
-        <th>ID</th>
-        <th>Titre</th>
-        <th>Description</th>
-        <th>Date</th>
-        <th>Heure</th>
-        <th>Lieu</th>
-        <th>Catégorie</th>
-        <th>Places</th>
-        <th>Image</th>
-        </tr>';
-        echo '<tr>';
-        echo '<td>' . $this->getId()          . '</td>';
-        echo '<td>' . $this->getTitle()       . '</td>';
-        echo '<td>' . $this->getDescription() . '</td>';
-        echo '<td>' . $this->getDate()        . '</td>';
-        echo '<td>' . $this->getTime()        . '</td>';
-        echo '<td>' . $this->getLocation()    . '</td>';
-        echo '<td>' . $this->getCategoryId()  . '</td>';
-        echo '<td>' . $this->getSeats()       . '</td>';
-        echo '<td>' . $this->getImage()       . '</td>';
-        echo '</tr>';
-        echo '</table>';
-    }
 }
 ?>
