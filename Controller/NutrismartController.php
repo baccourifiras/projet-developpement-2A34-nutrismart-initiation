@@ -1,4 +1,8 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once __DIR__ . '/../Config.php';
 require_once __DIR__ . '/CategoryController.php';
 require_once __DIR__ . '/EventController.php';
@@ -22,32 +26,33 @@ class NutrismartController
 
     public function handleRequest()
     {
-        header('Content-Type: application/json; charset=utf-8');
-
         try {
             $method = $_SERVER['REQUEST_METHOD'];
             $action = isset($_GET['action']) ? $_GET['action'] : 'all';
             $data = $this->input();
 
-            if ($method === 'GET' && $action === 'all') {
-                $this->respond($this->allData());
-            }
-
             if ($method !== 'POST') {
-                $this->respond(array('error' => 'Methode non autorisee.'), 405);
+                $this->redirectBack();
             }
 
-            $this->dispatch($action, $data);
+            $success = $this->dispatch($action, $data);
+            $this->redirectBack('', $success);
         } catch (InvalidArgumentException $e) {
             if ($this->pdo instanceof PDO && $this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
-            $this->respond(array('error' => $e->getMessage()), 400);
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $this->redirectBack($e->getMessage());
+            }
+            $this->redirectBack($e->getMessage());
         } catch (Throwable $e) {
             if ($this->pdo instanceof PDO && $this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
-            $this->respond(array('error' => $e->getMessage()), 500);
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $this->redirectBack($e->getMessage());
+            }
+            $this->redirectBack($e->getMessage());
         }
     }
 
@@ -56,43 +61,92 @@ class NutrismartController
         switch ($action) {
             case 'addCategory':
                 $this->categoryController->add($data);
-                $this->respond($this->allData());
-                break;
+                return 'add';
             case 'updateCategory':
                 $this->categoryController->update($data);
-                $this->respond($this->allData());
-                break;
+                return 'edit';
             case 'deleteCategory':
                 $this->categoryController->delete($data);
-                $this->respond($this->allData());
-                break;
+                return 'delete';
             case 'addEvent':
                 $this->eventController->add($data);
-                $this->respond($this->allData());
-                break;
+                return 'add';
             case 'updateEvent':
                 $this->eventController->update($data);
-                $this->respond($this->allData());
-                break;
+                return 'edit';
             case 'deleteEvent':
                 $this->eventController->delete($data);
-                $this->respond($this->allData());
-                break;
+                return 'delete';
             case 'addParticipant':
                 $this->participantController->add($data);
-                $this->respond($this->allData());
-                break;
+                return 'add';
             case 'updateParticipant':
                 $this->participantController->update($data);
-                $this->respond($this->allData());
-                break;
+                return 'edit';
             case 'deleteParticipant':
                 $this->participantController->delete($data);
-                $this->respond($this->allData());
-                break;
+                return 'delete';
             default:
-                $this->respond(array('error' => 'Action inconnue.'), 404);
+                throw new InvalidArgumentException('Action inconnue.');
         }
+    }
+
+    private function redirectBack($error = '', $success = '')
+    {
+        $target = isset($_POST['redirect']) && $_POST['redirect'] !== ''
+            ? $_POST['redirect']
+            : (isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '../View/FrontOffice/index.php');
+
+        $target = $this->cleanRedirectUrl($target);
+
+        if ($error !== '') {
+            $_SESSION['flash_error'] = $error;
+            $separator = strpos($target, '?') === false ? '?' : '&';
+            $target .= $separator . 'error=' . urlencode($error);
+        } elseif ($success !== '') {
+            $_SESSION['flash_success'] = $success;
+            $separator = strpos($target, '?') === false ? '?' : '&';
+            $target .= $separator . 'success=' . urlencode($success);
+        }
+
+        header('Location: ' . $target);
+        exit;
+    }
+
+    private function cleanRedirectUrl($target)
+    {
+        $parts = parse_url($target);
+        if ($parts === false) {
+            return $target;
+        }
+
+        $query = array();
+        if (isset($parts['query'])) {
+            parse_str($parts['query'], $query);
+            unset($query['success'], $query['error']);
+        }
+
+        $clean = '';
+        if (isset($parts['scheme'])) {
+            $clean .= $parts['scheme'] . '://';
+        }
+        if (isset($parts['host'])) {
+            $clean .= $parts['host'];
+        }
+        if (isset($parts['port'])) {
+            $clean .= ':' . $parts['port'];
+        }
+        $clean .= isset($parts['path']) ? $parts['path'] : '';
+
+        $queryString = http_build_query($query);
+        if ($queryString !== '') {
+            $clean .= '?' . $queryString;
+        }
+        if (isset($parts['fragment'])) {
+            $clean .= '#' . $parts['fragment'];
+        }
+
+        return $clean;
     }
 
     private function columnExists($table, $column)
@@ -139,26 +193,9 @@ class NutrismartController
 
     private function input()
     {
-        $raw = file_get_contents('php://input');
-        $data = json_decode($raw, true);
-        return is_array($data) ? $data : $_POST;
+        return $_POST;
     }
 
-    private function respond($data, $status = 200)
-    {
-        http_response_code($status);
-        echo json_encode($data);
-        exit;
-    }
-
-    private function allData()
-    {
-        return array(
-            'categories' => $this->categoryController->getAll(),
-            'events' => $this->eventController->getAll(),
-            'participants' => $this->participantController->getAll()
-        );
-    }
 }
 
 $controller = new NutrismartController();

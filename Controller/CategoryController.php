@@ -21,6 +21,7 @@ class CategoryController
 
     public function add($data)
     {
+        $this->validate($data);
         $stmt = $this->pdo->prepare(
             "INSERT INTO categorie (nom_categorie, description) VALUES (?, ?)"
         );
@@ -32,6 +33,7 @@ class CategoryController
 
     public function update($data)
     {
+        $this->validate($data);
         $stmt = $this->pdo->prepare(
             "UPDATE categorie SET nom_categorie = ?, description = ? WHERE id_categorie = ?"
         );
@@ -80,6 +82,22 @@ class CategoryController
             throw new InvalidArgumentException('ID invalide.');
         }
         return $id;
+    }
+
+    private function validate($data)
+    {
+        $name = trim($data['name'] ?? '');
+        $description = trim($data['description'] ?? '');
+
+        if (strlen($name) < 3) {
+            throw new InvalidArgumentException('Le nom de la categorie doit contenir au moins 3 caracteres.');
+        }
+        if (strlen($name) > 80) {
+            throw new InvalidArgumentException('Le nom de la categorie est trop long.');
+        }
+        if (strlen($description) > 255) {
+            throw new InvalidArgumentException('La description de la categorie est trop longue.');
+        }
     }
 }
 ?>

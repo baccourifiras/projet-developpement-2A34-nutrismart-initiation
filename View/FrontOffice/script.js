@@ -1,299 +1,199 @@
-/* ============================================================
-   NutriSmart — Front Office
-   Ce fichier gère :
-     1. La lecture/écriture des données avec MySQL via PHP
-     2. L'affichage des catégories
-     3. L'affichage des événements
-     4. L'inscription d'un participant
-   ============================================================ */
-
+/*
+   Front Office
+   JavaScript garde seulement les interactions de la page :
+   filtre, modal, controle de saisie et animations.
+*/
 
 (function () {
+  var categorieSelectionnee = null;
 
-/* ------------------------------------------------------------
-   SECTION 1 : DONNÉES
-   ------------------------------------------------------------ */
-
-var API_URL = '/nutrismart_evenement/Controller/NutrismartController.php';
-var DEFAULT_EVENT_IMAGE = 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80';
-var donneesCategories = [];
-var donneesEvenements = [];
-var donneesParticipants = [];
-
-
-/* ------------------------------------------------------------
-   SECTION 2 : LECTURE ET ÉCRITURE (PHP/MySQL)
-   ------------------------------------------------------------ */
-
-function appliquerDonnees(data) {
-  donneesCategories = data.categories || [];
-  donneesEvenements = data.events || [];
-  donneesParticipants = data.participants || [];
-
-  donneesCategories.forEach(function(c) {
-    c.id = Number(c.id);
-  });
-  donneesEvenements.forEach(function(e) {
-    e.id = Number(e.id);
-    e.categoryId = Number(e.categoryId);
-    e.seats = Number(e.seats || 0);
-  });
-  donneesParticipants.forEach(function(p) {
-    p.id = Number(p.id);
-    p.eventId = Number(p.eventId);
-  });
-}
-
-async function api(action, data) {
-  var options = action === 'all'
-    ? {}
-    : {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data || {})
-      };
-
-  var response = await fetch(API_URL + '?action=' + encodeURIComponent(action), options);
-  var json = await response.json();
-  if (!response.ok) {
-    throw new Error(json.error || 'Erreur serveur');
-  }
-  appliquerDonnees(json);
-  return json;
-}
-
-// Raccourcis pour lire chaque collection
-function getCategories()   { return donneesCategories;   }
-function getEvenements()   { return donneesEvenements;   }
-function getParticipants() { return donneesParticipants; }
-
-
-/* ------------------------------------------------------------
-   SECTION 3 : FONCTIONS UTILITAIRES
-   ------------------------------------------------------------ */
-
-// Retourne le nom d'une catégorie à partir de son ID
-function getNomCategorie(categoryId) {
-  var cat = getCategories().find(function(c) { return c.id === Number(categoryId); });
-  return cat ? cat.name : 'Sans catégorie';
-}
-
-// Compte le nombre de participants inscrits à un événement
-function getNbParticipants(eventId) {
-  return getParticipants().filter(function(p) { return p.eventId === Number(eventId); }).length;
-}
-
-// Formate une date (ex: "2026-05-12" → "12 mai 2026")
-function formaterDate(dateStr) {
-  if (!dateStr) return '-';
-  return new Intl.DateTimeFormat('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(dateStr));
-}
-
-// Génère les initiales d'une catégorie pour l'icône (ex: "Nutrition Sportive" → "NS")
-function initiales(nom) {
-  var mots = nom.split(' ').filter(Boolean);
-  return (mots[0] ? mots[0][0] : 'N') + (mots[1] ? mots[1][0] : '');
-}
-
-
-/* ------------------------------------------------------------
-   SECTION 4 : AFFICHAGE DES CATÉGORIES
-   ------------------------------------------------------------ */
-
-var categorieSelectionnee = null; // ID de la catégorie filtrée (null = tout afficher)
-
-function afficherCategories() {
-  var categories = getCategories();
-  var conteneur = document.getElementById('categoryList');
-  conteneur.innerHTML = '';
-
-  categories.forEach(function(cat, index) {
-    // Créer la carte
-    var carte = document.createElement('article');
-    carte.className = 'category-card reveal' + (categorieSelectionnee === cat.id ? ' active' : '');
-    carte.style.transitionDelay = (index * 70) + 'ms';
-    carte.innerHTML =
-      '<span class="shine"></span>' +
-      '<span class="category-icon">' + initiales(cat.name) + '</span>' +
-      '<h3>' + cat.name + '</h3>' +
-      '<p>' + (cat.description || 'Catégorie disponible.') + '</p>' +
-      '<span class="category-tag">Voir les événements</span>';
-
-    // Clic → filtrer les événements par cette catégorie
-    carte.addEventListener('click', function() {
-      categorieSelectionnee = cat.id;
-      afficherCategories();
-      afficherEvenements();
-    });
-
-    // Effet 3D au mouvement de la souris
-    carte.addEventListener('mousemove', function(e) {
-      var rect = carte.getBoundingClientRect();
-      var rotY =  ((e.clientX - rect.left  - rect.width  / 2) / (rect.width  / 2)) * 10;
-      var rotX = -((e.clientY - rect.top   - rect.height / 2) / (rect.height / 2)) * 8;
-      carte.style.transform = 'translateY(-14px) rotateX(' + rotX + 'deg) rotateY(' + rotY + 'deg) scale(1.03)';
-    });
-
-    // Réinitialiser la rotation quand la souris quitte la carte
-    carte.addEventListener('mouseleave', function() {
-      carte.style.transform = '';
-    });
-
-    conteneur.appendChild(carte);
-  });
-
-  activerAnimations();
-}
-
-
-/* ------------------------------------------------------------
-   SECTION 5 : AFFICHAGE DES ÉVÉNEMENTS
-   ------------------------------------------------------------ */
-
-function afficherEvenements() {
-  var tousLesEvenements = getEvenements();
-  var titre = document.getElementById('eventsTitle');
-  var conteneur = document.getElementById('eventList');
-
-  // Filtrer par catégorie si une est sélectionnée
-  var evenements = categorieSelectionnee
-    ? tousLesEvenements.filter(function(e) { return e.categoryId === categorieSelectionnee; })
-    : tousLesEvenements;
-
-  titre.textContent = categorieSelectionnee
-    ? 'Événements : ' + getNomCategorie(categorieSelectionnee)
-    : 'Tous les événements';
-
-  conteneur.innerHTML = '';
-
-  // Aucun événement trouvé
-  if (evenements.length === 0) {
-    conteneur.innerHTML = '<div class="no-data reveal visible">Aucun événement dans cette catégorie.</div>';
-    return;
-  }
-
-  evenements.forEach(function(ev, index) {
-    var carte = document.createElement('article');
-    carte.className = 'event-card reveal';
-    carte.style.transitionDelay = (index * 90) + 'ms';
-    var image = ev.image && ev.image.trim() ? ev.image.trim() : DEFAULT_EVENT_IMAGE;
-    carte.innerHTML =
-      '<img class="event-image" src="' + image + '" alt="' + ev.title + '" onerror="this.onerror=null;this.src=\'' + DEFAULT_EVENT_IMAGE + '\'">' +
-      '<div class="event-content">' +
-        '<span class="event-badge">' + getNomCategorie(ev.categoryId) + '</span>' +
-        '<h3>' + ev.title + '</h3>' +
-        '<p>' + ev.description + '</p>' +
-        '<p class="meta"><strong>Date :</strong> ' + formaterDate(ev.date) + ' à ' + ev.time + '</p>' +
-        '<p class="meta"><strong>Lieu :</strong> ' + ev.location + '</p>' +
-        '<p class="meta"><strong>Places :</strong> ' + ev.seats + '</p>' +
-        '<div class="event-actions">' +
-          '<span class="counter">' + getNbParticipants(ev.id) + ' participant(s)</span>' +
-          '<button class="primary-btn" data-event-id="' + ev.id + '">Participer</button>' +
-        '</div>' +
-      '</div>';
-    conteneur.appendChild(carte);
-  });
-
-  // Attacher les boutons "Participer"
-  conteneur.querySelectorAll('[data-event-id]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      ouvrirModal(Number(btn.dataset.eventId));
-    });
-  });
-
-  activerAnimations();
-}
-
-
-/* ------------------------------------------------------------
-   SECTION 6 : INSCRIPTION D'UN PARTICIPANT (Modal)
-   ------------------------------------------------------------ */
-
-function ouvrirModal(eventId) {
-  var ev = getEvenements().find(function(e) { return e.id === eventId; });
-  if (!ev) return;
-  document.getElementById('participantEventId').value = eventId;
-  document.getElementById('selectedEventText').textContent = 'Événement : ' + ev.title;
-  document.getElementById('messageBox').textContent = '';
-  document.getElementById('participantForm').reset();
-  document.getElementById('participantEventId').value = eventId;
-  document.getElementById('registerModal').classList.remove('hidden');
-}
-
-function fermerModal() {
-  document.getElementById('registerModal').classList.add('hidden');
-}
-
-// Bouton "Afficher tout" → annuler le filtre
-document.getElementById('showAllBtn').addEventListener('click', function() {
-  categorieSelectionnee = null;
-  afficherCategories();
-  afficherEvenements();
-});
-
-// Fermer le modal
-document.getElementById('closeModalBtn').addEventListener('click', fermerModal);
-document.getElementById('registerModal').addEventListener('click', function(e) {
-  if (e.target === this) fermerModal();
-});
-
-// Soumettre le formulaire d'inscription
-document.getElementById('participantForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-
-  try {
-    await api('addParticipant', {
-      fullName: document.getElementById('fullName').value.trim(),
-      email:    document.getElementById('email').value.trim(),
-      phone:    document.getElementById('phone').value.trim(),
-      eventId:  Number(document.getElementById('participantEventId').value)
-    });
-
-    document.getElementById('messageBox').textContent = 'Participation enregistrée avec succès !';
-    afficherEvenements();
-    setTimeout(fermerModal, 1000);
-  } catch (error) {
-    document.getElementById('messageBox').textContent = error.message;
-  }
-});
-
-
-/* ------------------------------------------------------------
-   SECTION 7 : ANIMATIONS D'APPARITION (scroll)
-   ------------------------------------------------------------ */
-
-function activerAnimations() {
-  var elements = document.querySelectorAll('.reveal:not(.observer-ready)');
-  var observateur = new IntersectionObserver(function(entrees) {
-    entrees.forEach(function(entree) {
-      if (entree.isIntersecting) {
-        entree.target.classList.add('visible');
-        observateur.unobserve(entree.target);
+  function activerAnimations() {
+    var elements = document.querySelectorAll('.reveal:not(.observer-ready)');
+    var observateur = new IntersectionObserver(function(entrees) {
+      for (var i = 0; i < entrees.length; i++) {
+        if (entrees[i].isIntersecting) {
+          entrees[i].target.classList.add('visible');
+          observateur.unobserve(entrees[i].target);
+        }
       }
-    });
-  }, { threshold: 0.15 });
+    }, { threshold: 0.15 });
 
-  elements.forEach(function(el) {
-    el.classList.add('observer-ready');
-    observateur.observe(el);
-  });
-}
-
-
-/* ------------------------------------------------------------
-   DÉMARRAGE : afficher les données au chargement de la page
-   ------------------------------------------------------------ */
-async function initialiserFrontOffice() {
-  try {
-    await api('all');
-    afficherCategories();
-    afficherEvenements();
-    activerAnimations();
-  } catch (error) {
-    document.getElementById('categoryList').innerHTML = '<div class="no-data visible">Impossible de charger la base de données.</div>';
-    document.getElementById('eventList').innerHTML = '<div class="no-data visible">' + error.message + '</div>';
+    for (var i = 0; i < elements.length; i++) {
+      elements[i].classList.add('observer-ready');
+      observateur.observe(elements[i]);
+    }
   }
-}
 
-initialiserFrontOffice();
+  function filtrerEvenements() {
+    var titre = document.getElementById('eventsTitle');
+    var cartes = document.querySelectorAll('.event-card');
+    var nbVisible = 0;
+
+    for (var i = 0; i < cartes.length; i++) {
+      var visible = !categorieSelectionnee || cartes[i].dataset.categoryId === categorieSelectionnee;
+      cartes[i].style.display = visible ? '' : 'none';
+      if (visible) nbVisible++;
+    }
+
+    if (categorieSelectionnee) {
+      var categorie = document.querySelector('.category-card[data-category-id="' + categorieSelectionnee + '"]');
+      var nomCategorie = categorie ? categorie.dataset.categoryName : '';
+      titre.textContent = 'Evenements : ' + nomCategorie;
+    } else {
+      titre.textContent = 'Tous les evenements';
+    }
+
+    var message = document.getElementById('noFilteredEvents');
+    if (!message) {
+      message = document.createElement('div');
+      message.id = 'noFilteredEvents';
+      message.className = 'no-data reveal visible';
+      message.textContent = 'Aucun evenement dans cette categorie.';
+      document.getElementById('eventList').appendChild(message);
+    }
+    message.style.display = nbVisible === 0 ? '' : 'none';
+  }
+
+  function connecterCategories() {
+    var categories = document.querySelectorAll('.category-card[data-category-id]');
+
+    for (var i = 0; i < categories.length; i++) {
+      categories[i].addEventListener('click', function() {
+        categorieSelectionnee = this.dataset.categoryId;
+
+        var cartes = document.querySelectorAll('.category-card');
+        for (var j = 0; j < cartes.length; j++) {
+          cartes[j].classList.toggle('active', cartes[j] === this);
+        }
+
+        filtrerEvenements();
+      });
+
+      categories[i].addEventListener('mousemove', function(e) {
+        var rect = this.getBoundingClientRect();
+        var rotY = ((e.clientX - rect.left - rect.width / 2) / (rect.width / 2)) * 10;
+        var rotX = -((e.clientY - rect.top - rect.height / 2) / (rect.height / 2)) * 8;
+        this.style.transform = 'translateY(-14px) rotateX(' + rotX + 'deg) rotateY(' + rotY + 'deg) scale(1.03)';
+      });
+
+      categories[i].addEventListener('mouseleave', function() {
+        this.style.transform = '';
+      });
+    }
+  }
+
+  function ouvrirModal(bouton) {
+    document.getElementById('participantForm').reset();
+    document.getElementById('participantEventId').value = bouton.dataset.eventId;
+    document.getElementById('selectedEventText').textContent = 'Evenement : ' + bouton.dataset.eventTitle;
+    document.getElementById('messageBox').textContent = '';
+    document.getElementById('registerModal').classList.remove('hidden');
+  }
+
+  function fermerModal() {
+    document.getElementById('registerModal').classList.add('hidden');
+  }
+
+  function connecterBoutonsParticipation() {
+    var boutons = document.querySelectorAll('[data-event-id]');
+
+    for (var i = 0; i < boutons.length; i++) {
+      boutons[i].addEventListener('click', function() {
+        ouvrirModal(this);
+      });
+    }
+  }
+
+  function afficherErreur(message) {
+    document.getElementById('messageBox').textContent = message;
+  }
+
+  function afficherAnimationSucces(type) {
+    if (type !== 'add') return;
+
+    var toast = document.getElementById('frontSuccessToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.className = 'front-success-toast';
+      toast.innerHTML =
+        '<strong>Participation enregistree</strong>' +
+        '<span>Votre inscription a ete ajoutee avec succes.</span>';
+      document.body.appendChild(toast);
+    }
+
+    setTimeout(function() {
+      toast.classList.add('hide');
+    }, 2200);
+    setTimeout(function() {
+      if (toast.parentNode) toast.remove();
+    }, 2700);
+  }
+
+  function lireParametre(nom) {
+    var query = window.location.search.substring(1);
+    var params = query.split('&');
+
+    for (var i = 0; i < params.length; i++) {
+      var morceau = params[i].split('=');
+      if (decodeURIComponent(morceau[0]) === nom) {
+        return decodeURIComponent(morceau[1] || '');
+      }
+    }
+
+    return '';
+  }
+
+  function controlerParticipant() {
+    var nom = document.getElementById('fullName').value.trim();
+    var email = document.getElementById('email').value.trim();
+    var phone = document.getElementById('phone').value.trim();
+    var eventId = document.getElementById('participantEventId').value;
+    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    var phoneRegex = /^[2459][0-9]{7}$/;
+
+    if (nom.length < 3) {
+      afficherErreur('Le nom complet doit contenir au moins 3 caracteres.');
+      return false;
+    }
+    if (!emailRegex.test(email)) {
+      afficherErreur('Veuillez saisir une adresse email valide.');
+      return false;
+    }
+    if (!phoneRegex.test(phone)) {
+      afficherErreur('Le telephone doit contenir 8 chiffres et commencer par 2, 4, 5 ou 9.');
+      return false;
+    }
+    if (!eventId) {
+      afficherErreur('Veuillez choisir un evenement.');
+      return false;
+    }
+
+    afficherErreur('');
+    return true;
+  }
+
+  document.getElementById('showAllBtn').addEventListener('click', function() {
+    categorieSelectionnee = null;
+    var cartes = document.querySelectorAll('.category-card');
+    for (var i = 0; i < cartes.length; i++) {
+      cartes[i].classList.remove('active');
+    }
+    filtrerEvenements();
+  });
+
+  document.getElementById('closeModalBtn').addEventListener('click', fermerModal);
+  document.getElementById('registerModal').addEventListener('click', function(e) {
+    if (e.target === this) fermerModal();
+  });
+
+  document.getElementById('participantForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (controlerParticipant()) this.submit();
+  });
+
+  connecterCategories();
+  connecterBoutonsParticipation();
+  filtrerEvenements();
+  afficherAnimationSucces(lireParametre('success'));
+  activerAnimations();
 })();

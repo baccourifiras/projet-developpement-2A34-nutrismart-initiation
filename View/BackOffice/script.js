@@ -1,574 +1,382 @@
-/* ============================================================
-   NutriSmart — Backoffice script.js
-   Ce fichier gère TOUT le backoffice :
-     1. La lecture / écriture avec MySQL via PHP
-     3. Ajouter / Modifier / Supprimer : Catégories, Événements, Participants
-     4. Affichage des tableaux
-     5. Les modals (modification + confirmation suppression)
-   ============================================================ */
-
+/*
+   Back Office
+   JavaScript garde seulement les controles, les modals et l'envoi POST classique.
+*/
 
 (function () {
+  var CONTROLLER_URL = '/nutrismart_evenement/Controller/NutrismartController.php';
 
-/* ------------------------------------------------------------
-   SECTION 1 : DONNÉES
-   ------------------------------------------------------------ */
-
-var API_URL = '/nutrismart_evenement/Controller/NutrismartController.php';
-var donneesCategories = [];
-var donneesEvenements = [];
-var donneesParticipants = [];
-
-
-/* ------------------------------------------------------------
-   SECTION 2 : LECTURE ET ÉCRITURE (PHP/MySQL)
-   ------------------------------------------------------------ */
-
-function appliquerDonnees(data) {
-  donneesCategories = data.categories || [];
-  donneesEvenements = data.events || [];
-  donneesParticipants = data.participants || [];
-
-  donneesCategories.forEach(function(c) {
-    c.id = Number(c.id);
-  });
-  donneesEvenements.forEach(function(e) {
-    e.id = Number(e.id);
-    e.categoryId = Number(e.categoryId);
-    e.seats = Number(e.seats || 0);
-  });
-  donneesParticipants.forEach(function(p) {
-    p.id = Number(p.id);
-    p.eventId = Number(p.eventId);
-  });
-}
-
-async function api(action, data) {
-  var options = action === 'all'
-    ? {}
-    : {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data || {})
-      };
-
-  var response = await fetch(API_URL + '?action=' + encodeURIComponent(action), options);
-  var json = await response.json();
-  if (!response.ok) {
-    throw new Error(json.error || 'Erreur serveur');
-  }
-  appliquerDonnees(json);
-  return json;
-}
-
-// Raccourcis pour accéder à chaque collection
-function getCategories()   { return donneesCategories;   }
-function getEvenements()   { return donneesEvenements;   }
-function getParticipants() { return donneesParticipants; }
-
-// Retourne le nom d'une catégorie depuis son ID
-function getNomCategorie(id) {
-  var cat = getCategories().find(function(c) { return c.id === Number(id); });
-  return cat ? cat.name : 'Sans catégorie';
-}
-
-// Retourne le titre d'un événement depuis son ID
-function getTitreEvenement(id) {
-  var ev = getEvenements().find(function(e) { return e.id === Number(id); });
-  return ev ? ev.title : 'Événement introuvable';
-}
-
-// Formate une date ISO en français (ex: "2026-05-12" → "12 mai 2026")
-function formaterDate(dateStr) {
-  if (!dateStr) return '-';
-  return new Intl.DateTimeFormat('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(dateStr));
-}
-
-// Badge HTML pour les IDs dans les tableaux
-function badgeId(id) {
-  return '<span class="id-badge">' + (Number(id) || '-') + '</span>';
-}
-
-function afficherMessageSucces(type, titre, message) {
-  var ancien = document.getElementById('successToast');
-  if (ancien) ancien.remove();
-
-  var icones = {
-    add: '+',
-    edit: '✓',
-    delete: '×'
-  };
-
-  var toast = document.createElement('div');
-  toast.id = 'successToast';
-  toast.className = 'success-toast ' + type;
-  toast.innerHTML =
-    '<span class="toast-icon">' + (icones[type] || '✓') + '</span>' +
-    '<span class="toast-content">' +
-      '<strong>' + titre + '</strong>' +
-      '<small>' + message + '</small>' +
-    '</span>' +
-    '<span class="toast-progress"></span>';
-  document.body.appendChild(toast);
-
-  setTimeout(function() {
-    toast.classList.add('hide');
-  }, 2200);
-  setTimeout(function() {
-    if (toast.parentNode) toast.remove();
-  }, 2700);
-}
-
-
-/* ------------------------------------------------------------
-   SECTION 3 : AJOUTER
-
-   Ces fonctions ajoutent un nouvel élément dans MySQL.
-   ------------------------------------------------------------ */
-
-async function ajouterCategorie(data) { 
-  await api('addCategory', data);
-}
-
-async function ajouterEvenement(data) {
-  await api('addEvent', data);
-}
-
-
-/* ------------------------------------------------------------
-   SECTION 4 : MODIFIER
-
-   Ces fonctions trouvent un élément par son ID et le mettent à jour.
-   ------------------------------------------------------------ */
-
-async function modifierCategorie(id, data) {
-  data.id = Number(id);
-  await api('updateCategory', data);
-}
-
-async function modifierEvenement(id, data) {
-  data.id = Number(id);
-  await api('updateEvent', data);
-}
-
-async function modifierParticipant(id, data) {
-  data.id = Number(id);
-  await api('updateParticipant', data);
-}
-
-
-/* ------------------------------------------------------------
-   SECTION 5 : SUPPRIMER
-
-   La suppression d'une catégorie supprime aussi ses événements
-   et les participants de ces événements (cascade).
-   ------------------------------------------------------------ */
-
-async function supprimerCategorie(id) {
-  await api('deleteCategory', { id: Number(id) });
-}
-
-async function supprimerEvenement(id) {
-  await api('deleteEvent', { id: Number(id) });
-}
-
-async function supprimerParticipant(id) {
-  await api('deleteParticipant', { id: Number(id) });
-}
-
-
-/* ------------------------------------------------------------
-   SECTION 6 : AFFICHAGE DES TABLEAUX
-   ------------------------------------------------------------ */
-
-function afficherTableauCategories() {
-  var liste = getCategories();
-  document.getElementById('categoryTableContainer').innerHTML =
-    '<div class="table-wrapper"><table class="table">' +
-    '<thead><tr><th>ID</th><th>Nom</th><th>Description</th><th>Actions</th></tr></thead>' +
-    '<tbody>' +
-    liste.map(function(c) {
-      return '<tr>' +
-        '<td>' + badgeId(c.id) + '</td>' +
-        '<td><span class="small-badge">' + c.name + '</span></td>' +
-        '<td>' + (c.description || '-') + '</td>' +
-        '<td class="action-cell">' +
-          '<button class="edit-btn"   onclick="afficherModalModifCategorie(' + c.id + ')">✏️ Modifier</button>' +
-          '<button class="delete-btn" onclick="afficherConfirmSuppression(\'Supprimer la catégorie <strong>' + c.name + '</strong> ? Ses événements et participants seront aussi supprimés.\', function(){ supprimerCategorie(' + c.id + '); })">🗑️ Supprimer</button>' +
-        '</td>' +
-      '</tr>';
-    }).join('') +
-    '</tbody></table></div>';
-}
-
-function afficherTableauEvenements() {
-  var liste = getEvenements();
-  document.getElementById('eventTableContainer').innerHTML =
-    '<div class="table-wrapper"><table class="table">' +
-    '<thead><tr><th>ID</th><th>Titre</th><th>Catégorie</th><th>Date</th><th>Lieu</th><th>Actions</th></tr></thead>' +
-    '<tbody>' +
-    liste.map(function(e) {
-      return '<tr>' +
-        '<td>' + badgeId(e.id) + '</td>' +
-        '<td>' + e.title + '</td>' +
-        '<td>' + getNomCategorie(e.categoryId) + '</td>' +
-        '<td>' + formaterDate(e.date) + '</td>' +
-        '<td>' + e.location + '</td>' +
-        '<td class="action-cell">' +
-          '<button class="edit-btn"   onclick="afficherModalModifEvenement(' + e.id + ')">✏️ Modifier</button>' +
-          '<button class="delete-btn" onclick="afficherConfirmSuppression(\'Supprimer <strong>' + e.title + '</strong> ? Ses participants seront aussi supprimés.\', function(){ supprimerEvenement(' + e.id + '); })">🗑️ Supprimer</button>' +
-        '</td>' +
-      '</tr>';
-    }).join('') +
-    '</tbody></table></div>';
-}
-
-function afficherTableauParticipants() {
-  var liste = getParticipants();
-  if (liste.length === 0) {
-    document.getElementById('participantTableContainer').innerHTML = '<p class="note">Aucun participant enregistré pour le moment.</p>';
-    return;
-  }
-  document.getElementById('participantTableContainer').innerHTML =
-    '<div class="table-wrapper"><table class="table">' +
-    '<thead><tr><th>ID</th><th>Participant</th><th>Email</th><th>Téléphone</th><th>Événement</th><th>Inscrit le</th><th>Actions</th></tr></thead>' +
-    '<tbody>' +
-    liste.map(function(p) {
-      return '<tr>' +
-        '<td>' + badgeId(p.id) + '</td>' +
-        '<td>' + p.fullName + '</td>' +
-        '<td>' + p.email + '</td>' +
-        '<td>' + p.phone + '</td>' +
-        '<td>' + getTitreEvenement(p.eventId) + '</td>' +
-        '<td>' + p.registeredAt + '</td>' +
-        '<td class="action-cell">' +
-          '<button class="edit-btn"   onclick="afficherModalModifParticipant(' + p.id + ')">✏️ Modifier</button>' +
-          '<button class="delete-btn" onclick="afficherConfirmSuppression(\'Supprimer le participant <strong>' + p.fullName + '</strong> ?\', function(){ supprimerParticipant(' + p.id + '); })">🗑️ Supprimer</button>' +
-        '</td>' +
-      '</tr>';
-    }).join('') +
-    '</tbody></table></div>';
-}
-
-
-/* ------------------------------------------------------------
-   SECTION 7 : MODALS
-
-   a) Modal de confirmation de suppression
-   b) Modal de modification d'une catégorie
-   c) Modal de modification d'un événement
-   d) Modal de modification d'un participant
-   ------------------------------------------------------------ */
-
-// a) Affiche un modal de confirmation avant de supprimer
-function afficherConfirmSuppression(message, fonctionSupprimer) {
-  // Supprimer l'ancien modal s'il existe
-  var ancien = document.getElementById('deleteModal');
-  if (ancien) ancien.remove();
-
-  var modal = document.createElement('div');
-  modal.id = 'deleteModal';
-  modal.innerHTML =
-    '<div class="confirm-overlay">' +
-      '<div class="confirm-box">' +
-        '<div class="confirm-icon">🗑️</div>' +
-        '<h3>Confirmer la suppression</h3>' +
-        '<p>' + message + '</p>' +
-        '<div class="confirm-actions">' +
-          '<button class="cancel-btn" id="annulerSuppr">Annuler</button>' +
-          '<button class="danger-btn"  id="confirmerSuppr">Supprimer</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(modal);
-
-  // Clic "Supprimer" → exécute la fonction passée en paramètre
-  document.getElementById('confirmerSuppr').addEventListener('click', async function() {
-    try {
-      await fonctionSupprimer();
-      modal.remove();
-      toutRafraichir();
-      afficherMessageSucces('delete', 'Suppression réussie', 'Les données ont été retirées de la base.');
-    } catch (error) {
-      alert(error.message);
+  function texteValide(valeur, min, label) {
+    if (!valeur || valeur.trim().length < min) {
+      alert(label + ' doit contenir au moins ' + min + ' caracteres.');
+      return false;
     }
-  });
+    return true;
+  }
 
-  // Clic "Annuler" ou sur le fond → fermer
-  document.getElementById('annulerSuppr').addEventListener('click', function() { modal.remove(); });
-  modal.querySelector('.confirm-overlay').addEventListener('click', function(e) {
-    if (e.target === modal.querySelector('.confirm-overlay')) modal.remove();
-  });
-}
+  function echapperHtml(valeur) {
+    return String(valeur || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
-// b) Modal modification d'une catégorie
-function afficherModalModifCategorie(id) {
-  var cat = getCategories().find(function(c) { return c.id === Number(id); });
-  if (!cat) return;
+  function afficherAnimationSucces(type) {
+    var textes = {
+      add: ['Ajout reussi', 'Les donnees sont enregistrees.'],
+      edit: ['Modification reussie', 'Les changements sont sauvegardes.'],
+      'delete': ['Suppression reussie', 'Les donnees sont supprimees.']
+    };
+    var info = textes[type];
+    if (!info) return;
 
-  var ancien = document.getElementById('editModal');
-  if (ancien) ancien.remove();
+    var toast = document.createElement('div');
+    toast.className = 'success-toast ' + type;
+    toast.innerHTML =
+      '<span class="toast-icon">' + (type === 'delete' ? 'x' : '+') + '</span>' +
+      '<span class="toast-content">' +
+        '<strong>' + info[0] + '</strong>' +
+        '<small>' + info[1] + '</small>' +
+      '</span>' +
+      '<span class="toast-progress"></span>';
+    document.body.appendChild(toast);
 
-  var modal = document.createElement('div');
-  modal.id = 'editModal';
-  modal.innerHTML =
-    '<div class="confirm-overlay">' +
-      '<div class="confirm-box edit-box">' +
-        '<h3>✏️ Modifier la catégorie</h3>' +
-        '<div class="form-grid">' +
-          '<div><label>Nom</label><input id="mCatNom" type="text" value="' + cat.name + '" /></div>' +
-          '<div><label>Description</label><input id="mCatDesc" type="text" value="' + (cat.description || '') + '" /></div>' +
+    setTimeout(function() {
+      toast.classList.add('hide');
+    }, 2200);
+    setTimeout(function() {
+      if (toast.parentNode) toast.remove();
+    }, 2700);
+  }
+
+  function controlerCategorie(data) {
+    return texteValide(data.name, 3, 'Le nom de la categorie');
+  }
+
+  function controlerEvenement(data) {
+    var dateEvenement = data.date ? new Date(data.date + 'T00:00:00') : null;
+    var aujourdHui = new Date();
+    aujourdHui.setHours(0, 0, 0, 0);
+
+    if (!texteValide(data.title, 3, 'Le titre')) return false;
+    if (!data.categoryId) {
+      alert('Veuillez choisir une categorie.');
+      return false;
+    }
+    if (!data.date || !dateEvenement || dateEvenement < aujourdHui) {
+      alert('Veuillez choisir une date valide, aujourd hui ou plus tard.');
+      return false;
+    }
+    if (!data.time) {
+      alert('Veuillez saisir une heure.');
+      return false;
+    }
+    if (!texteValide(data.location, 3, 'Le lieu')) return false;
+    if (!Number(data.seats) || Number(data.seats) < 1) {
+      alert('Le nombre de places doit etre superieur a 0.');
+      return false;
+    }
+    if (!texteValide(data.description, 10, 'La description')) return false;
+    if (data.image && !/^https?:\/\/.+/i.test(data.image)) {
+      alert('L URL de l image doit commencer par http:// ou https://.');
+      return false;
+    }
+    return true;
+  }
+
+  function controlerParticipant(data) {
+    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    var phoneRegex = /^[2459][0-9]{7}$/;
+
+    if (!texteValide(data.fullName, 3, 'Le nom complet')) return false;
+    if (!emailRegex.test(data.email || '')) {
+      alert('Veuillez saisir une adresse email valide.');
+      return false;
+    }
+    if (!phoneRegex.test(data.phone || '')) {
+      alert('Le telephone doit contenir 8 chiffres et commencer par 2, 4, 5 ou 9.');
+      return false;
+    }
+    if (!data.eventId) {
+      alert('Veuillez choisir un evenement.');
+      return false;
+    }
+    return true;
+  }
+
+  function envoyerFormulaire(action, data) {
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = CONTROLLER_URL + '?action=' + encodeURIComponent(action);
+
+    var champs = Object.keys(data || {});
+    for (var i = 0; i < champs.length; i++) {
+      var key = champs[i];
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = data[key];
+      form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  function fermerModal(id) {
+    var modal = document.getElementById(id);
+    if (modal) modal.remove();
+  }
+
+  function afficherConfirmSuppression(message, fonctionSupprimer) {
+    fermerModal('deleteModal');
+
+    var modal = document.createElement('div');
+    modal.id = 'deleteModal';
+    modal.innerHTML =
+      '<div class="confirm-overlay">' +
+        '<div class="confirm-box">' +
+          '<div class="confirm-icon">!</div>' +
+          '<h3>Confirmer la suppression</h3>' +
+          '<p>' + message + '</p>' +
+          '<div class="confirm-actions">' +
+            '<button class="cancel-btn" id="annulerSuppr">Annuler</button>' +
+            '<button class="danger-btn" id="confirmerSuppr">Supprimer</button>' +
+          '</div>' +
         '</div>' +
-        '<div class="confirm-actions">' +
-          '<button class="cancel-btn" id="annulerModif">Annuler</button>' +
-          '<button class="primary-btn" id="sauvegarderModif">Enregistrer</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(modal);
+      '</div>';
+    document.body.appendChild(modal);
 
-  document.getElementById('sauvegarderModif').addEventListener('click', async function() {
-    try {
-      await modifierCategorie(id, {
-        name:        document.getElementById('mCatNom').value.trim(),
+    document.getElementById('confirmerSuppr').addEventListener('click', fonctionSupprimer);
+    document.getElementById('annulerSuppr').addEventListener('click', function() { fermerModal('deleteModal'); });
+    modal.querySelector('.confirm-overlay').addEventListener('click', function(e) {
+      if (e.target === modal.querySelector('.confirm-overlay')) fermerModal('deleteModal');
+    });
+  }
+
+  function afficherModalModifCategorie(bouton) {
+    fermerModal('editModal');
+
+    var modal = document.createElement('div');
+    modal.id = 'editModal';
+    modal.innerHTML =
+      '<div class="confirm-overlay">' +
+        '<div class="confirm-box edit-box">' +
+          '<h3>Modifier la categorie</h3>' +
+          '<div class="form-grid">' +
+            '<div><label>Nom</label><input id="mCatNom" type="text" value="' + echapperHtml(bouton.dataset.name) + '" /></div>' +
+            '<div><label>Description</label><input id="mCatDesc" type="text" value="' + echapperHtml(bouton.dataset.description) + '" /></div>' +
+          '</div>' +
+          '<div class="confirm-actions">' +
+            '<button class="cancel-btn" id="annulerModif">Annuler</button>' +
+            '<button class="primary-btn" id="sauvegarderModif">Enregistrer</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+
+    document.getElementById('sauvegarderModif').addEventListener('click', function() {
+      var data = {
+        id: bouton.dataset.id,
+        name: document.getElementById('mCatNom').value.trim(),
         description: document.getElementById('mCatDesc').value.trim()
-      });
-      modal.remove();
-      toutRafraichir();
-      afficherMessageSucces('edit', 'Modification enregistrée', 'Les changements sont sauvegardés.');
-    } catch (error) {
-      alert(error.message);
-    }
-  });
-  document.getElementById('annulerModif').addEventListener('click', function() { modal.remove(); });
-}
+      };
+      if (controlerCategorie(data)) envoyerFormulaire('updateCategory', data);
+    });
+    document.getElementById('annulerModif').addEventListener('click', function() { fermerModal('editModal'); });
+  }
 
-// c) Modal modification d'un événement
-function afficherModalModifEvenement(id) {
-  var ev = getEvenements().find(function(e) { return e.id === Number(id); });
-  if (!ev) return;
+  function afficherModalModifEvenement(bouton) {
+    fermerModal('editModal');
 
-  var ancien = document.getElementById('editModal');
-  if (ancien) ancien.remove();
-
-  // Construire les options du select catégorie
-  var optionsCat = getCategories().map(function(c) {
-    return '<option value="' + c.id + '"' + (c.id === ev.categoryId ? ' selected' : '') + '>' + c.name + '</option>';
-  }).join('');
-
-  var modal = document.createElement('div');
-  modal.id = 'editModal';
-  modal.innerHTML =
-    '<div class="confirm-overlay">' +
-      '<div class="confirm-box edit-box">' +
-        '<h3>✏️ Modifier l\'événement</h3>' +
-        '<div class="form-grid two-columns">' +
-          '<div><label>Titre</label><input id="mEvTitre" type="text" value="' + ev.title + '" /></div>' +
-          '<div><label>Catégorie</label><select id="mEvCat">' + optionsCat + '</select></div>' +
-          '<div><label>Date</label><input id="mEvDate" type="date" value="' + ev.date + '" /></div>' +
-          '<div><label>Heure</label><input id="mEvHeure" type="time" value="' + ev.time + '" /></div>' +
-          '<div><label>Lieu</label><input id="mEvLieu" type="text" value="' + ev.location + '" /></div>' +
-          '<div><label>Places</label><input id="mEvPlaces" type="number" min="1" value="' + ev.seats + '" /></div>' +
-          '<div class="full-width"><label>Description</label><textarea id="mEvDesc" rows="3">' + ev.description + '</textarea></div>' +
-          '<div class="full-width"><label>Image URL</label><input id="mEvImage" type="url" value="' + (ev.image || '') + '" /></div>' +
+    var optionsCat = document.getElementById('eventCategory').innerHTML;
+    var modal = document.createElement('div');
+    modal.id = 'editModal';
+    modal.innerHTML =
+      '<div class="confirm-overlay">' +
+        '<div class="confirm-box edit-box">' +
+          '<h3>Modifier l evenement</h3>' +
+          '<div class="form-grid two-columns">' +
+            '<div><label>Titre</label><input id="mEvTitre" type="text" value="' + echapperHtml(bouton.dataset.title) + '" /></div>' +
+            '<div><label>Categorie</label><select id="mEvCat">' + optionsCat + '</select></div>' +
+            '<div><label>Date</label><input id="mEvDate" type="date" value="' + echapperHtml(bouton.dataset.date) + '" /></div>' +
+            '<div><label>Heure</label><input id="mEvHeure" type="time" value="' + echapperHtml(bouton.dataset.time) + '" /></div>' +
+            '<div><label>Lieu</label><input id="mEvLieu" type="text" value="' + echapperHtml(bouton.dataset.location) + '" /></div>' +
+            '<div><label>Places</label><input id="mEvPlaces" type="number" min="1" value="' + echapperHtml(bouton.dataset.seats) + '" /></div>' +
+            '<div class="full-width"><label>Description</label><textarea id="mEvDesc" rows="3">' + echapperHtml(bouton.dataset.description) + '</textarea></div>' +
+            '<div class="full-width"><label>Image URL</label><input id="mEvImage" type="url" value="' + echapperHtml(bouton.dataset.image) + '" /></div>' +
+          '</div>' +
+          '<div class="confirm-actions">' +
+            '<button class="cancel-btn" id="annulerModif">Annuler</button>' +
+            '<button class="primary-btn" id="sauvegarderModif">Enregistrer</button>' +
+          '</div>' +
         '</div>' +
-        '<div class="confirm-actions">' +
-          '<button class="cancel-btn" id="annulerModif">Annuler</button>' +
-          '<button class="primary-btn" id="sauvegarderModif">Enregistrer</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(modal);
+      '</div>';
+    document.body.appendChild(modal);
+    document.getElementById('mEvCat').value = bouton.dataset.categoryId;
 
-  document.getElementById('sauvegarderModif').addEventListener('click', async function() {
-    try {
-      await modifierEvenement(id, {
-        title:       document.getElementById('mEvTitre').value.trim(),
-        categoryId:  document.getElementById('mEvCat').value,
-        date:        document.getElementById('mEvDate').value,
-        time:        document.getElementById('mEvHeure').value,
-        location:    document.getElementById('mEvLieu').value.trim(),
-        seats:       document.getElementById('mEvPlaces').value,
+    document.getElementById('sauvegarderModif').addEventListener('click', function() {
+      var data = {
+        id: bouton.dataset.id,
+        title: document.getElementById('mEvTitre').value.trim(),
+        categoryId: document.getElementById('mEvCat').value,
+        date: document.getElementById('mEvDate').value,
+        time: document.getElementById('mEvHeure').value,
+        location: document.getElementById('mEvLieu').value.trim(),
+        seats: document.getElementById('mEvPlaces').value,
         description: document.getElementById('mEvDesc').value.trim(),
-        image:       document.getElementById('mEvImage').value.trim()
-      });
-      modal.remove();
-      toutRafraichir();
-      afficherMessageSucces('edit', 'Modification enregistrée', 'Les changements sont sauvegardés.');
-    } catch (error) {
-      alert(error.message);
-    }
-  });
-  document.getElementById('annulerModif').addEventListener('click', function() { modal.remove(); });
-}
+        image: document.getElementById('mEvImage').value.trim()
+      };
+      if (controlerEvenement(data)) envoyerFormulaire('updateEvent', data);
+    });
+    document.getElementById('annulerModif').addEventListener('click', function() { fermerModal('editModal'); });
+  }
 
-// d) Modal modification d'un participant
-function afficherModalModifParticipant(id) {
-  var p = getParticipants().find(function(p) { return p.id === Number(id); });
-  if (!p) return;
+  function afficherModalModifParticipant(bouton) {
+    fermerModal('editModal');
 
-  var ancien = document.getElementById('editModal');
-  if (ancien) ancien.remove();
-
-  // Options des événements
-  var optionsEv = getEvenements().map(function(e) {
-    return '<option value="' + e.id + '"' + (e.id === p.eventId ? ' selected' : '') + '>' + e.title + '</option>';
-  }).join('');
-
-  var modal = document.createElement('div');
-  modal.id = 'editModal';
-  modal.innerHTML =
-    '<div class="confirm-overlay">' +
-      '<div class="confirm-box edit-box">' +
-        '<h3>✏️ Modifier le participant</h3>' +
-        '<div class="form-grid two-columns">' +
-          '<div><label>Nom complet</label><input id="mPNom" type="text" value="' + p.fullName + '" /></div>' +
-          '<div><label>Email</label><input id="mPEmail" type="email" value="' + p.email + '" /></div>' +
-          '<div><label>Téléphone</label><input id="mPTel" type="text" value="' + p.phone + '" /></div>' +
-          '<div><label>Événement</label><select id="mPEvent">' + optionsEv + '</select></div>' +
+    var optionsEv = document.getElementById('eventOptionsSource').innerHTML;
+    var modal = document.createElement('div');
+    modal.id = 'editModal';
+    modal.innerHTML =
+      '<div class="confirm-overlay">' +
+        '<div class="confirm-box edit-box">' +
+          '<h3>Modifier le participant</h3>' +
+          '<div class="form-grid two-columns">' +
+            '<div><label>Nom complet</label><input id="mPNom" type="text" value="' + echapperHtml(bouton.dataset.fullName) + '" /></div>' +
+            '<div><label>Email</label><input id="mPEmail" type="email" value="' + echapperHtml(bouton.dataset.email) + '" /></div>' +
+            '<div><label>Telephone</label><input id="mPTel" type="text" minlength="8" maxlength="8" pattern="[2459][0-9]{7}" value="' + echapperHtml(bouton.dataset.phone) + '" /></div>' +
+            '<div><label>Evenement</label><select id="mPEvent">' + optionsEv + '</select></div>' +
+          '</div>' +
+          '<div class="confirm-actions">' +
+            '<button class="cancel-btn" id="annulerModif">Annuler</button>' +
+            '<button class="primary-btn" id="sauvegarderModif">Enregistrer</button>' +
+          '</div>' +
         '</div>' +
-        '<div class="confirm-actions">' +
-          '<button class="cancel-btn" id="annulerModif">Annuler</button>' +
-          '<button class="primary-btn" id="sauvegarderModif">Enregistrer</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(modal);
+      '</div>';
+    document.body.appendChild(modal);
+    document.getElementById('mPEvent').value = bouton.dataset.eventId;
 
-  document.getElementById('sauvegarderModif').addEventListener('click', async function() {
-    try {
-      await modifierParticipant(id, {
+    document.getElementById('sauvegarderModif').addEventListener('click', function() {
+      var data = {
+        id: bouton.dataset.id,
         fullName: document.getElementById('mPNom').value.trim(),
-        email:    document.getElementById('mPEmail').value.trim(),
-        phone:    document.getElementById('mPTel').value.trim(),
-        eventId:  document.getElementById('mPEvent').value
-      });
-      modal.remove();
-      toutRafraichir();
-      afficherMessageSucces('edit', 'Modification enregistrée', 'Les changements sont sauvegardés.');
-    } catch (error) {
-      alert(error.message);
-    }
-  });
-  document.getElementById('annulerModif').addEventListener('click', function() { modal.remove(); });
-}
+        email: document.getElementById('mPEmail').value.trim(),
+        phone: document.getElementById('mPTel').value.trim(),
+        eventId: document.getElementById('mPEvent').value
+      };
+      if (controlerParticipant(data)) envoyerFormulaire('updateParticipant', data);
+    });
+    document.getElementById('annulerModif').addEventListener('click', function() { fermerModal('editModal'); });
+  }
 
+  function supprimerCategorie(id) {
+    envoyerFormulaire('deleteCategory', { id: Number(id) });
+  }
 
-/* ------------------------------------------------------------
-   SECTION 8 : STATISTIQUES ET SELECT CATÉGORIE
-   ------------------------------------------------------------ */
+  function supprimerEvenement(id) {
+    envoyerFormulaire('deleteEvent', { id: Number(id) });
+  }
 
-function mettreAJourStats() {
-  document.getElementById('categoryCount').textContent    = getCategories().length;
-  document.getElementById('eventCount').textContent       = getEvenements().length;
-  document.getElementById('participantCount').textContent = getParticipants().length;
-}
+  function supprimerParticipant(id) {
+    envoyerFormulaire('deleteParticipant', { id: Number(id) });
+  }
 
-function remplirSelectCategorie() {
-  var select = document.getElementById('eventCategory');
-  var cats   = getCategories();
-  select.innerHTML = '<option value="">Choisir une catégorie</option>';
-  cats.forEach(function(c) {
-    var opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = c.name;
-    select.appendChild(opt);
-  });
-}
-
-// Rafraîchit tous les éléments de la page
-function toutRafraichir() {
-  mettreAJourStats();
-  remplirSelectCategorie();
-  afficherTableauCategories();
-  afficherTableauEvenements();
-  afficherTableauParticipants();
-}
-
-
-/* ------------------------------------------------------------
-   SECTION 9 : FORMULAIRES D'AJOUT
-   ------------------------------------------------------------ */
-
-// Formulaire : ajouter une catégorie
-document.getElementById('categoryForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  try {
-    await ajouterCategorie({
-      name:        document.getElementById('categoryName').value.trim(),
+  document.getElementById('categoryForm').addEventListener('submit', function(e) {
+    var data = {
+      name: document.getElementById('categoryName').value.trim(),
       description: document.getElementById('categoryDescription').value.trim()
-    });
-    this.reset();
-    toutRafraichir();
-    afficherMessageSucces('add', 'Ajout réussi', 'La catégorie est ajoutée à la base.');
-  } catch (error) {
-    alert(error.message);
-  }
-});
+    };
+    if (!controlerCategorie(data)) e.preventDefault();
+  });
 
-// Formulaire : ajouter un événement
-document.getElementById('eventForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  try {
-    await ajouterEvenement({
-      title:       document.getElementById('eventTitle').value.trim(),
-      categoryId:  document.getElementById('eventCategory').value,
-      date:        document.getElementById('eventDate').value,
-      time:        document.getElementById('eventTime').value,
-      location:    document.getElementById('eventLocation').value.trim(),
-      seats:       document.getElementById('eventSeats').value,
+  document.getElementById('eventForm').addEventListener('submit', function(e) {
+    var data = {
+      title: document.getElementById('eventTitle').value.trim(),
+      categoryId: document.getElementById('eventCategory').value,
+      date: document.getElementById('eventDate').value,
+      time: document.getElementById('eventTime').value,
+      location: document.getElementById('eventLocation').value.trim(),
+      seats: document.getElementById('eventSeats').value,
       description: document.getElementById('eventDescription').value.trim(),
-      image:       document.getElementById('eventImage').value.trim()
-    });
-    this.reset();
-    toutRafraichir();
-    afficherMessageSucces('add', 'Ajout réussi', 'L’événement est ajouté à la base.');
-  } catch (error) {
-    alert(error.message);
+      image: document.getElementById('eventImage').value.trim()
+    };
+    if (!controlerEvenement(data)) e.preventDefault();
+  });
+
+  function initMenuActif() {
+    var liens = Array.from(document.querySelectorAll('.menu a[href^="#"]'));
+    var sections = [];
+
+    for (var i = 0; i < liens.length; i++) {
+      var section = document.querySelector(liens[i].getAttribute('href'));
+      if (section) sections.push(section);
+    }
+
+    var obs = new IntersectionObserver(function(entrees) {
+      for (var i = 0; i < entrees.length; i++) {
+        if (!entrees[i].isIntersecting) continue;
+        for (var j = 0; j < liens.length; j++) {
+          liens[j].classList.toggle('active', liens[j].getAttribute('href') === '#' + entrees[i].target.id);
+        }
+      }
+    }, { threshold: 0.35 });
+
+    for (var i = 0; i < sections.length; i++) {
+      obs.observe(sections[i]);
+    }
   }
-});
 
-/* ------------------------------------------------------------
-   SECTION 10 : MENU ACTIF AU SCROLL
-   ------------------------------------------------------------ */
+  function lireParametre(nom) {
+    var query = window.location.search.substring(1);
+    var params = query.split('&');
 
-function initMenuActif() {
-  var liens    = Array.from(document.querySelectorAll('.menu a[href^="#"]'));
-  var sections = liens.map(function(l) { return document.querySelector(l.getAttribute('href')); }).filter(Boolean);
+    for (var i = 0; i < params.length; i++) {
+      var morceau = params[i].split('=');
+      if (decodeURIComponent(morceau[0]) === nom) {
+        return decodeURIComponent(morceau[1] || '');
+      }
+    }
 
-  var obs = new IntersectionObserver(function(entrees) {
-    entrees.forEach(function(entree) {
-      if (!entree.isIntersecting) return;
-      liens.forEach(function(l) {
-        l.classList.toggle('active', l.getAttribute('href') === '#' + entree.target.id);
-      });
-    });
-  }, { threshold: 0.35 });
-
-  sections.forEach(function(s) { obs.observe(s); });
-}
-
-
-/* ------------------------------------------------------------
-   DÉMARRAGE : initialiser la page
-   ------------------------------------------------------------ */
-async function initialiserBackOffice() {
-  try {
-    await api('all');
-    toutRafraichir();
-    initMenuActif();
-  } catch (error) {
-    alert('Impossible de charger la base de données : ' + error.message);
+    return '';
   }
-}
 
-window.afficherConfirmSuppression = afficherConfirmSuppression;
-window.afficherModalModifCategorie = afficherModalModifCategorie;
-window.afficherModalModifEvenement = afficherModalModifEvenement;
-window.afficherModalModifParticipant = afficherModalModifParticipant;
-window.supprimerCategorie = supprimerCategorie;
-window.supprimerEvenement = supprimerEvenement;
-window.supprimerParticipant = supprimerParticipant;
+  function nettoyerParametreSucces() {
+    if (!window.history || !window.history.replaceState) return;
 
-initialiserBackOffice();
+    var query = window.location.search.substring(1);
+    var params = query.split('&');
+    var nouvelleQuery = [];
+
+    for (var i = 0; i < params.length; i++) {
+      if (params[i] === '') continue;
+      var nom = params[i].split('=')[0];
+      if (decodeURIComponent(nom) !== 'success') {
+        nouvelleQuery.push(params[i]);
+      }
+    }
+
+    var nouvelleUrl = window.location.pathname;
+    if (nouvelleQuery.length > 0) {
+      nouvelleUrl += '?' + nouvelleQuery.join('&');
+    }
+    nouvelleUrl += window.location.hash;
+
+    window.history.replaceState(null, '', nouvelleUrl);
+  }
+
+  window.afficherConfirmSuppression = afficherConfirmSuppression;
+  window.afficherModalModifCategorie = afficherModalModifCategorie;
+  window.afficherModalModifEvenement = afficherModalModifEvenement;
+  window.afficherModalModifParticipant = afficherModalModifParticipant;
+  window.supprimerCategorie = supprimerCategorie;
+  window.supprimerEvenement = supprimerEvenement;
+  window.supprimerParticipant = supprimerParticipant;
+
+  var success = lireParametre('success');
+  afficherAnimationSucces(success);
+  if (success !== '') nettoyerParametreSucces();
+  initMenuActif();
 })();

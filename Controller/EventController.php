@@ -34,6 +34,7 @@ class EventController {
     }
 
     public function add($data) {
+        $this->validate($data);
         $stmt = $this->pdo->prepare(
             "INSERT INTO evenement (titre, description, date_evenement, heure_evenement, lieu, image, id_categorie, places)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
@@ -51,6 +52,7 @@ class EventController {
     }
 
     public function update($data) {
+        $this->validate($data);
         $stmt = $this->pdo->prepare(
             "UPDATE evenement
              SET titre = ?, description = ?, date_evenement = ?, heure_evenement = ?,
@@ -101,6 +103,60 @@ class EventController {
             throw new InvalidArgumentException('ID invalide.');
         }
         return $id;
+    }
+
+    private function validate($data) {
+        $title = trim($data['title'] ?? '');
+        $description = trim($data['description'] ?? '');
+        $date = $data['date'] ?? '';
+        $time = $data['time'] ?? '';
+        $location = trim($data['location'] ?? '');
+        $image = trim($data['image'] ?? '');
+        $categoryId = (int) ($data['categoryId'] ?? 0);
+        $seats = (int) ($data['seats'] ?? 0);
+
+        if (strlen($title) < 3 || strlen($title) > 120) {
+            throw new InvalidArgumentException('Le titre doit contenir entre 3 et 120 caracteres.');
+        }
+        if ($categoryId <= 0) {
+            throw new InvalidArgumentException('Veuillez choisir une categorie.');
+        }
+        if (!$this->categoryExists($categoryId)) {
+            throw new InvalidArgumentException('La categorie choisie est introuvable.');
+        }
+        if (!$this->validDate($date)) {
+            throw new InvalidArgumentException('Veuillez saisir une date valide.');
+        }
+        if (!$this->validTime($time)) {
+            throw new InvalidArgumentException('Veuillez saisir une heure valide.');
+        }
+        if (strlen($location) < 3 || strlen($location) > 120) {
+            throw new InvalidArgumentException('Le lieu doit contenir entre 3 et 120 caracteres.');
+        }
+        if ($seats < 1) {
+            throw new InvalidArgumentException('Le nombre de places doit etre superieur a 0.');
+        }
+        if (strlen($description) < 10 || strlen($description) > 1000) {
+            throw new InvalidArgumentException('La description doit contenir entre 10 et 1000 caracteres.');
+        }
+        if ($image !== '' && !filter_var($image, FILTER_VALIDATE_URL)) {
+            throw new InvalidArgumentException('L URL de l image est invalide.');
+        }
+    }
+
+    private function categoryExists($categoryId) {
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM categorie WHERE id_categorie = ?");
+        $stmt->execute(array($categoryId));
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    private function validDate($date) {
+        $parts = explode('-', $date);
+        return count($parts) === 3 && checkdate((int) $parts[1], (int) $parts[2], (int) $parts[0]);
+    }
+
+    private function validTime($time) {
+        return (bool) preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/', (string) $time);
     }
 }
 ?>

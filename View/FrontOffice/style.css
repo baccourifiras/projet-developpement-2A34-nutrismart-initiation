@@ -570,6 +570,47 @@ input:focus {
   margin-top: 14px;
 }
 
+.front-success-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 9999;
+  width: min(340px, calc(100vw - 32px));
+  padding: 16px 18px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(31,164,99,.18);
+  box-shadow: 0 22px 55px rgba(16, 40, 27, .18);
+  color: var(--success);
+  display: grid;
+  gap: 4px;
+  animation: frontToastIn .28s ease both;
+}
+
+.front-success-toast strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.front-success-toast span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.front-success-toast.hide {
+  animation: frontToastOut .28s ease both;
+}
+
+@keyframes frontToastIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes frontToastOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(12px); }
+}
+
 .selected-event {
   color: var(--muted);
 }

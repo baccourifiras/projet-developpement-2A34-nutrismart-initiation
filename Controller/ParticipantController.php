@@ -27,6 +27,7 @@ class ParticipantController {
     }
 
     public function add($data) {
+        $this->validate($data);
         $stmt = $this->pdo->prepare(
             "INSERT INTO participant (nom, email, telephone, id_evenement, date_inscription)
              VALUES (?, ?, ?, ?, CURDATE())"
@@ -40,6 +41,7 @@ class ParticipantController {
     }
 
     public function update($data) {
+        $this->validate($data);
         $stmt = $this->pdo->prepare(
             "UPDATE participant SET nom = ?, email = ?, telephone = ?, id_evenement = ?
              WHERE id_participant = ?"
@@ -77,6 +79,35 @@ class ParticipantController {
             throw new InvalidArgumentException('ID invalide.');
         }
         return $id;
+    }
+
+    private function validate($data) {
+        $fullName = trim($data['fullName'] ?? '');
+        $email = trim($data['email'] ?? '');
+        $phone = trim($data['phone'] ?? '');
+        $eventId = (int) ($data['eventId'] ?? 0);
+
+        if (strlen($fullName) < 3 || strlen($fullName) > 120) {
+            throw new InvalidArgumentException('Le nom complet doit contenir entre 3 et 120 caracteres.');
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new InvalidArgumentException('Veuillez saisir une adresse email valide.');
+        }
+        if (!preg_match('/^[2459][0-9]{7}$/', $phone)) {
+            throw new InvalidArgumentException('Le telephone doit contenir 8 chiffres et commencer par 2, 4, 5 ou 9.');
+        }
+        if ($eventId <= 0) {
+            throw new InvalidArgumentException('Veuillez choisir un evenement.');
+        }
+        if (!$this->eventExists($eventId)) {
+            throw new InvalidArgumentException('L evenement choisi est introuvable.');
+        }
+    }
+
+    private function eventExists($eventId) {
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM evenement WHERE id_evenement = ?");
+        $stmt->execute(array($eventId));
+        return (int) $stmt->fetchColumn() > 0;
     }
 }
 ?>

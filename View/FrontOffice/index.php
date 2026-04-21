@@ -1,4 +1,68 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+require_once __DIR__ . '/../../Config.php';
+require_once __DIR__ . '/../../Controller/CategoryController.php';
+require_once __DIR__ . '/../../Controller/EventController.php';
+require_once __DIR__ . '/../../Controller/ParticipantController.php';
+
+function e($value) {
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+function categoryInitials($name) {
+    $words = preg_split('/\s+/', trim($name));
+    $first = isset($words[0][0]) ? $words[0][0] : 'N';
+    $second = isset($words[1][0]) ? $words[1][0] : '';
+    return strtoupper($first . $second);
+}
+
+function formatDateFr($date) {
+    if (!$date) return '-';
+    $timestamp = strtotime($date);
+    return $timestamp ? date('d/m/Y', $timestamp) : '-';
+}
+
+function categoryNameById($categories, $categoryId) {
+    foreach ($categories as $category) {
+        if ((int) $category['id'] === (int) $categoryId) {
+            return $category['name'];
+        }
+    }
+    return 'Sans categorie';
+}
+
+function participantCountByEvent($participants, $eventId) {
+    $count = 0;
+    foreach ($participants as $participant) {
+        if ((int) $participant['eventId'] === (int) $eventId) {
+            $count++;
+        }
+    }
+    return $count;
+}
+
+$categories = array();
+$events = array();
+$participants = array();
+$loadError = '';
+$flashSuccess = isset($_SESSION['flash_success']) ? $_SESSION['flash_success'] : '';
+unset($_SESSION['flash_success']);
+
+try {
+    $pdo = config::getConnexion();
+    $categoryController = new CategoryController($pdo);
+    $eventController = new EventController($pdo);
+    $participantController = new ParticipantController($pdo);
+
+    $categories = $categoryController->getAll();
+    $events = $eventController->getAll();
+    $participants = $participantController->getAll();
+} catch (Throwable $error) {
+    $loadError = $error->getMessage();
+}
 /*
  * ============================================================
  * NutriSmart — Fichier PHP
@@ -67,7 +131,23 @@
         </div>
         <button id="showAllBtn" class="secondary-btn">Afficher tout</button>
       </div>
-      <div id="categoryList" class="category-grid"></div>
+      <div id="categoryList" class="category-grid">
+        <?php if ($loadError): ?>
+          <div class="no-data reveal visible">Impossible de charger la base de donnees : <?= e($loadError) ?></div>
+        <?php elseif (empty($categories)): ?>
+          <div class="no-data reveal visible">Aucune categorie disponible.</div>
+        <?php else: ?>
+          <?php foreach ($categories as $index => $category): ?>
+	            <article class="category-card reveal" data-category-id="<?= e($category['id']) ?>" data-category-name="<?= e($category['name']) ?>" style="transition-delay: <?= (int) $index * 70 ?>ms">
+              <span class="shine"></span>
+              <span class="category-icon"><?= e(categoryInitials($category['name'])) ?></span>
+              <h3><?= e($category['name']) ?></h3>
+              <p><?= e($category['description'] ?: 'Categorie disponible.') ?></p>
+              <span class="category-tag">Voir les evenements</span>
+            </article>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </div>
     </section>
 
     <section id="events" class="section">
@@ -77,7 +157,31 @@
           <h2 id="eventsTitle">Tous les événements</h2>
         </div>
       </div>
-      <div id="eventList" class="event-grid"></div>
+      <div id="eventList" class="event-grid">
+        <?php if ($loadError): ?>
+          <div class="no-data reveal visible"><?= e($loadError) ?></div>
+        <?php elseif (empty($events)): ?>
+          <div class="no-data reveal visible">Aucun evenement disponible.</div>
+        <?php else: ?>
+          <?php foreach ($events as $index => $event): ?>
+            <article class="event-card reveal" data-category-id="<?= e($event['categoryId']) ?>" style="transition-delay: <?= (int) $index * 90 ?>ms">
+              <img class="event-image" src="<?= e($event['image']) ?>" alt="<?= e($event['title']) ?>">
+              <div class="event-content">
+                <span class="event-badge"><?= e(categoryNameById($categories, $event['categoryId'])) ?></span>
+                <h3><?= e($event['title']) ?></h3>
+                <p><?= e($event['description']) ?></p>
+                <p class="meta"><strong>Date :</strong> <?= e(formatDateFr($event['date'])) ?> a <?= e($event['time']) ?></p>
+                <p class="meta"><strong>Lieu :</strong> <?= e($event['location']) ?></p>
+                <p class="meta"><strong>Places :</strong> <?= e($event['seats']) ?></p>
+                <div class="event-actions">
+                  <span class="counter"><?= participantCountByEvent($participants, $event['id']) ?> participant(s)</span>
+	                  <button class="primary-btn" data-event-id="<?= e($event['id']) ?>" data-event-title="<?= e($event['title']) ?>">Participer</button>
+                </div>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </div>
     </section>
 
     <section id="about" class="section info-section">
@@ -112,17 +216,18 @@
       <p id="selectedEventText" class="selected-event"></p>
       <form id="participantForm" class="form-grid" method="POST" action="../../Controller/NutrismartController.php?action=addParticipant">
         <input type="hidden" id="participantEventId" name="eventId" />
+        <input type="hidden" name="redirect" value="/nutrismart_evenement/View/FrontOffice/index.php" />
         <div>
           <label for="fullName">Nom complet</label>
-          <input id="fullName" name="fullName" required type="text" placeholder="Votre nom" />
+          <input id="fullName" name="fullName" required type="text" minlength="3" maxlength="120" placeholder="Votre nom" />
         </div>
         <div>
           <label for="email">Email</label>
-          <input id="email" name="email" required type="email" placeholder="votre@email.com" />
+          <input id="email" name="email" required type="email" maxlength="160" placeholder="votre@email.com" />
         </div>
         <div>
           <label for="phone">Téléphone</label>
-          <input id="phone" name="phone" required type="text" placeholder="22 111 222" />
+          <input id="phone" name="phone" required type="text" minlength="8" maxlength="8" pattern="[2459][0-9]{7}" placeholder="22111222" />
         </div>
         <button type="submit" class="primary-btn">Valider la participation</button>
       </form>
@@ -130,7 +235,14 @@
     </div>
   </div>
 
-  <script src="script.js?v=20260415-iife"></script>
+	  <?php if ($flashSuccess === 'add' || (isset($_GET['success']) && $_GET['success'] === 'add')): ?>
+    <div class="front-success-toast" id="frontSuccessToast">
+      <strong>Participation enregistree</strong>
+      <span>Votre inscription a ete ajoutee avec succes.</span>
+    </div>
+  <?php endif; ?>
+
+	  <script src="script.js?v=20260415-front-success"></script>
   <script>
     /* =====================================================
        NAVBAR — animations et comportement au scroll
