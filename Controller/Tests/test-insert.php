@@ -10,7 +10,7 @@ $data = [
     'duree' => 30
 ];
 
-$ch = curl_init('http://localhost/files/back/api-regime.php?action=regime');
+$ch = curl_init('http://localhost/files/Controller/api-regime.php?action=regime');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));

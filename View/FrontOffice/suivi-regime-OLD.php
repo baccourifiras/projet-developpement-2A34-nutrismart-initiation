@@ -283,7 +283,7 @@
       <a href="regime.php">Régimes</a>
       <a href="suivi-regime.php">Suivi</a>
       <a href="historique.php">Historique</a>
-      <a href="../backoffice/regime-admin.php" class="nav-dashboard">Dashboard</a>
+      <a href="../BackOffice/regime-admin.php" class="nav-dashboard">Dashboard</a>
     </div>
   </nav>
 
@@ -396,7 +396,7 @@
      NutriSmart — suivi-regime.php (CORRIGÉ - API BACKEND)
      ============================================================ */
 
-  const API_BASE = '../back/api-regime.php';
+  const API_BASE = '../../Controller/api-regime.php';
   var regimeActif = null;
 
   /* ── Appel API générique ────────────────────────────────– */

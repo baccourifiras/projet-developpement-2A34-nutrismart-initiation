@@ -1,0 +1,22 @@
+@import url("../../FrontOffice/css/app.css");
+
+.page-admin {
+    background:
+        radial-gradient(circle at top left, rgba(31, 143, 95, 0.14), transparent 24%),
+        radial-gradient(circle at right top, rgba(21, 56, 45, 0.1), transparent 20%),
+        linear-gradient(180deg, #f7f3eb 0%, #ebdfcb 100%);
+}
+
+.page-shell--admin {
+    width: min(1320px, calc(100% - 32px));
+}
+
+.hero--admin {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 42%),
+        linear-gradient(135deg, #12251d 0%, #184f3a 54%, #c7682d 126%);
+}
+
+.page-shell--admin .surface {
+    margin-top: 18px;
+}
