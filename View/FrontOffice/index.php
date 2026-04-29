@@ -8,48 +8,13 @@ require_once __DIR__ . '/../../Controller/CategoryController.php';
 require_once __DIR__ . '/../../Controller/EventController.php';
 require_once __DIR__ . '/../../Controller/ParticipantController.php';
 
-function e($value) {
-    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-}
-
-function categoryInitials($name) {
-    $words = preg_split('/\s+/', trim($name));
-    $first = isset($words[0][0]) ? $words[0][0] : 'N';
-    $second = isset($words[1][0]) ? $words[1][0] : '';
-    return strtoupper($first . $second);
-}
-
-function formatDateFr($date) {
-    if (!$date) return '-';
-    $timestamp = strtotime($date);
-    return $timestamp ? date('d/m/Y', $timestamp) : '-';
-}
-
-function categoryNameById($categories, $categoryId) {
-    foreach ($categories as $category) {
-        if ((int) $category['id'] === (int) $categoryId) {
-            return $category['name'];
-        }
-    }
-    return 'Sans categorie';
-}
-
-function participantCountByEvent($participants, $eventId) {
-    $count = 0;
-    foreach ($participants as $participant) {
-        if ((int) $participant['eventId'] === (int) $eventId) {
-            $count++;
-        }
-    }
-    return $count;
-}
-
 $categories = array();
 $events = array();
 $participants = array();
 $loadError = '';
 $flashSuccess = isset($_SESSION['flash_success']) ? $_SESSION['flash_success'] : '';
-unset($_SESSION['flash_success']);
+$flashError = isset($_SESSION['flash_error']) ? $_SESSION['flash_error'] : '';
+unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
 try {
     $pdo = config::getConnexion();
@@ -63,17 +28,6 @@ try {
 } catch (Throwable $error) {
     $loadError = $error->getMessage();
 }
-/*
- * ============================================================
- * NutriSmart — Fichier PHP
- *
- * Pour l'instant ce fichier est une page HTML standard.
- * Quand le projet sera connecté à MySQL :
- *   - Remplacer les données JavaScript par des requêtes SQL
- *   - Exemple : $categories = $pdo->query("SELECT * FROM categories")->fetchAll();
- *   - Utiliser echo pour injecter les données dans la page
- * ============================================================
- */
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -133,16 +87,16 @@ try {
       </div>
       <div id="categoryList" class="category-grid">
         <?php if ($loadError): ?>
-          <div class="no-data reveal visible">Impossible de charger la base de donnees : <?= e($loadError) ?></div>
+          <div class="no-data reveal visible">Impossible de charger la base de donnees : <?= htmlspecialchars((string) $loadError, ENT_QUOTES, 'UTF-8') ?></div>
         <?php elseif (empty($categories)): ?>
           <div class="no-data reveal visible">Aucune categorie disponible.</div>
         <?php else: ?>
           <?php foreach ($categories as $index => $category): ?>
-	            <article class="category-card reveal" data-category-id="<?= e($category['id']) ?>" data-category-name="<?= e($category['name']) ?>" style="transition-delay: <?= (int) $index * 70 ?>ms">
+	            <article class="category-card reveal" data-category-id="<?= htmlspecialchars((string) $category['id'], ENT_QUOTES, 'UTF-8') ?>" data-category-name="<?= htmlspecialchars((string) $category['name'], ENT_QUOTES, 'UTF-8') ?>" data-reveal-delay="<?= (int) $index * 70 ?>">
               <span class="shine"></span>
-              <span class="category-icon"><?= e(categoryInitials($category['name'])) ?></span>
-              <h3><?= e($category['name']) ?></h3>
-              <p><?= e($category['description'] ?: 'Categorie disponible.') ?></p>
+              <span class="category-icon"><?= htmlspecialchars((string) $categoryController->categoryInitials($category['name']), ENT_QUOTES, 'UTF-8') ?></span>
+              <h3><?= htmlspecialchars((string) $category['name'], ENT_QUOTES, 'UTF-8') ?></h3>
+              <p><?= htmlspecialchars((string) ($category['description'] ?: 'Categorie disponible.'), ENT_QUOTES, 'UTF-8') ?></p>
               <span class="category-tag">Voir les evenements</span>
             </article>
           <?php endforeach; ?>
@@ -159,23 +113,23 @@ try {
       </div>
       <div id="eventList" class="event-grid">
         <?php if ($loadError): ?>
-          <div class="no-data reveal visible"><?= e($loadError) ?></div>
+          <div class="no-data reveal visible"><?= htmlspecialchars((string) $loadError, ENT_QUOTES, 'UTF-8') ?></div>
         <?php elseif (empty($events)): ?>
           <div class="no-data reveal visible">Aucun evenement disponible.</div>
         <?php else: ?>
           <?php foreach ($events as $index => $event): ?>
-            <article class="event-card reveal" data-category-id="<?= e($event['categoryId']) ?>" style="transition-delay: <?= (int) $index * 90 ?>ms">
-              <img class="event-image" src="<?= e($event['image']) ?>" alt="<?= e($event['title']) ?>">
+            <article class="event-card reveal" data-category-id="<?= htmlspecialchars((string) $event['categoryId'], ENT_QUOTES, 'UTF-8') ?>" data-reveal-delay="<?= (int) $index * 90 ?>">
+              <img class="event-image" src="<?= htmlspecialchars((string) $event['image'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) $event['title'], ENT_QUOTES, 'UTF-8') ?>">
               <div class="event-content">
-                <span class="event-badge"><?= e(categoryNameById($categories, $event['categoryId'])) ?></span>
-                <h3><?= e($event['title']) ?></h3>
-                <p><?= e($event['description']) ?></p>
-                <p class="meta"><strong>Date :</strong> <?= e(formatDateFr($event['date'])) ?> a <?= e($event['time']) ?></p>
-                <p class="meta"><strong>Lieu :</strong> <?= e($event['location']) ?></p>
-                <p class="meta"><strong>Places :</strong> <?= e($event['seats']) ?></p>
+                <span class="event-badge"><?= htmlspecialchars((string) $categoryController->categoryNameById($categories, $event['categoryId']), ENT_QUOTES, 'UTF-8') ?></span>
+                <h3><?= htmlspecialchars((string) $event['title'], ENT_QUOTES, 'UTF-8') ?></h3>
+                <p><?= htmlspecialchars((string) $event['description'], ENT_QUOTES, 'UTF-8') ?></p>
+                <p class="meta"><strong>Date :</strong> <?= htmlspecialchars((string) $eventController->formatDateFr($event['date']), ENT_QUOTES, 'UTF-8') ?> a <?= htmlspecialchars((string) $event['time'], ENT_QUOTES, 'UTF-8') ?></p>
+                <p class="meta"><strong>Lieu :</strong> <?= htmlspecialchars((string) $event['location'], ENT_QUOTES, 'UTF-8') ?></p>
+                <p class="meta"><strong>Places :</strong> <?= htmlspecialchars((string) $event['seats'], ENT_QUOTES, 'UTF-8') ?></p>
                 <div class="event-actions">
-                  <span class="counter"><?= participantCountByEvent($participants, $event['id']) ?> participant(s)</span>
-	                  <button class="primary-btn" data-event-id="<?= e($event['id']) ?>" data-event-title="<?= e($event['title']) ?>">Participer</button>
+                  <span class="counter"><?= $participantController->participantCountByEvent($participants, $event['id']) ?> participant(s)</span>
+	                  <button class="primary-btn" data-event-id="<?= htmlspecialchars((string) $event['id'], ENT_QUOTES, 'UTF-8') ?>" data-event-title="<?= htmlspecialchars((string) $event['title'], ENT_QUOTES, 'UTF-8') ?>">Participer</button>
                 </div>
               </div>
             </article>
@@ -219,19 +173,19 @@ try {
         <input type="hidden" name="redirect" value="/nutrismart_evenement/View/FrontOffice/index.php" />
         <div>
           <label for="fullName">Nom complet</label>
-          <input id="fullName" name="fullName" required type="text" minlength="3" maxlength="120" placeholder="Votre nom" />
+          <input id="fullName" name="fullName" required type="text" minlength="3" maxlength="120" placeholder="Votre nom" title="Le nom complet doit contenir entre 3 et 120 caracteres." />
         </div>
         <div>
           <label for="email">Email</label>
-          <input id="email" name="email" required type="email" maxlength="160" placeholder="votre@email.com" />
+          <input id="email" name="email" required type="email" maxlength="160" placeholder="votre@email.com" title="Veuillez saisir une adresse email valide." />
         </div>
         <div>
           <label for="phone">Téléphone</label>
-          <input id="phone" name="phone" required type="text" minlength="8" maxlength="8" pattern="[2459][0-9]{7}" placeholder="22111222" />
+          <input id="phone" name="phone" required type="text" minlength="8" maxlength="8" pattern="[2459][0-9]{7}" placeholder="22111222" title="Le telephone doit contenir 8 chiffres et commencer par 2, 4, 5 ou 9." />
         </div>
         <button type="submit" class="primary-btn">Valider la participation</button>
       </form>
-      <p id="messageBox" class="message"></p>
+      <p id="messageBox" class="message"><?= htmlspecialchars((string) $flashError, ENT_QUOTES, 'UTF-8') ?></p>
     </div>
   </div>
 
@@ -241,41 +195,7 @@ try {
       <span>Votre inscription a ete ajoutee avec succes.</span>
     </div>
   <?php endif; ?>
-
-	  <script src="script.js?v=20260415-front-success"></script>
-  <script>
-    /* =====================================================
-       NAVBAR — animations et comportement au scroll
-       ===================================================== */
-    (function () {
-      var navbar = document.getElementById('navbar');
-
-      /* 1. Effet scroll : la navbar devient plus opaque et compacte */
-      window.addEventListener('scroll', function () {
-        if (window.scrollY > 50) {
-          navbar.classList.add('scrolled');
-        } else {
-          navbar.classList.remove('scrolled');
-        }
-      });
-
-      /* 2. Marquer le lien actif selon la page courante */
-      var currentPage = window.location.pathname.split('/').pop() || 'index.php';
-      document.querySelectorAll('.nav-links a').forEach(function (link) {
-        if (link.getAttribute('href') === currentPage) {
-          link.classList.add('active');
-        }
-      });
-
-      /* 3. Micro-animation au clic : effet ripple sur le lien cliqué */
-      document.querySelectorAll('.nav-links a').forEach(function (link) {
-        link.addEventListener('click', function () {
-          this.style.transform = 'scale(0.93)';
-          var self = this;
-          setTimeout(function () { self.style.transform = ''; }, 150);
-        });
-      });
-    })();
-  </script>
+  <script src="script.js?v=20260428-structure"></script>
 </body>
 </html>
+

@@ -1,41 +1,58 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once __DIR__ . '/../../Config.php';
 require_once __DIR__ . '/../../Controller/CategoryController.php';
 require_once __DIR__ . '/../../Controller/EventController.php';
 require_once __DIR__ . '/../../Controller/ParticipantController.php';
 
-function e($value) {
-    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-}
+$categoriesAll = array();
+$eventsAll = array();
+$participantsAll = array();
 
-function formatDateFr($date) {
-    if (!$date) return '-';
-    $timestamp = strtotime($date);
-    return $timestamp ? date('d/m/Y', $timestamp) : '-';
-}
-
-function categoryNameById($categories, $categoryId) {
-    foreach ($categories as $category) {
-        if ((int) $category['id'] === (int) $categoryId) {
-            return $category['name'];
-        }
-    }
-    return 'Sans categorie';
-}
-
-function eventTitleById($events, $eventId) {
-    foreach ($events as $event) {
-        if ((int) $event['id'] === (int) $eventId) {
-            return $event['title'];
-        }
-    }
-    return 'Evenement introuvable';
-}
-
-$categories = array();
-$events = array();
-$participants = array();
+$categoriesTable = array();
+$eventsTable = array();
+$participantsTable = array();
 $loadError = '';
+$flashSuccess = isset($_SESSION['flash_success']) ? $_SESSION['flash_success'] : '';
+$flashError = isset($_SESSION['flash_error']) ? $_SESSION['flash_error'] : '';
+unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+
+// ============================
+// Parametres recherche/tri GET
+// ============================
+$catId = null;
+$evtId = null;
+$parId = null;
+
+if (isset($_GET['cat_id']) && $_GET['cat_id'] !== '') {
+    $tmp = (int) $_GET['cat_id'];
+    $catId = $tmp > 0 ? $tmp : null;
+}
+if (isset($_GET['evt_id']) && $_GET['evt_id'] !== '') {
+    $tmp = (int) $_GET['evt_id'];
+    $evtId = $tmp > 0 ? $tmp : null;
+}
+if (isset($_GET['par_id']) && $_GET['par_id'] !== '') {
+    $tmp = (int) $_GET['par_id'];
+    $parId = $tmp > 0 ? $tmp : null;
+}
+
+$catSort = isset($_GET['cat_sort']) && $_GET['cat_sort'] !== '' ? (string) $_GET['cat_sort'] : 'id';
+$catDir = isset($_GET['cat_dir']) && $_GET['cat_dir'] !== '' ? (string) $_GET['cat_dir'] : 'ASC';
+$evtSort = isset($_GET['evt_sort']) && $_GET['evt_sort'] !== '' ? (string) $_GET['evt_sort'] : 'id';
+$evtDir = isset($_GET['evt_dir']) && $_GET['evt_dir'] !== '' ? (string) $_GET['evt_dir'] : 'ASC';
+$parSort = isset($_GET['par_sort']) && $_GET['par_sort'] !== '' ? (string) $_GET['par_sort'] : 'id';
+$parDir = isset($_GET['par_dir']) && $_GET['par_dir'] !== '' ? (string) $_GET['par_dir'] : 'ASC';
+
+$catSortNorm = strtolower(trim($catSort));
+$catDirNorm = strtoupper(trim($catDir));
+$evtSortNorm = strtolower(trim($evtSort));
+$evtDirNorm = strtoupper(trim($evtDir));
+$parSortNorm = strtolower(trim($parSort));
+$parDirNorm = strtoupper(trim($parDir));
 
 try {
     $pdo = config::getConnexion();
@@ -43,9 +60,13 @@ try {
     $eventController = new EventController($pdo);
     $participantController = new ParticipantController($pdo);
 
-    $categories = $categoryController->getAll();
-    $events = $eventController->getAll();
-    $participants = $participantController->getAll();
+    $categoriesAll = $categoryController->getAll();
+    $eventsAll = $eventController->getAll();
+    $participantsAll = $participantController->getAll();
+
+    $categoriesTable = $categoryController->searchByIdAndSort($catId, $catSortNorm, $catDirNorm);
+    $eventsTable = $eventController->searchByIdAndSort($evtId, $evtSortNorm, $evtDirNorm);
+    $participantsTable = $participantController->searchByIdAndSort($parId, $parSortNorm, $parDirNorm);
 } catch (Throwable $error) {
     $loadError = $error->getMessage();
 }
@@ -67,7 +88,7 @@ try {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NutriSmart - Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20260415-toast" />
+  <link rel="stylesheet" href="style.css?v=20260429-anim" />
 </head>
 <body>
   <aside class="sidebar">
@@ -99,15 +120,15 @@ try {
     <section id="dashboard" class="panel stats-panel">
       <div class="stats-card">
         <span>Catégories</span>
-        <strong id="categoryCount"><?= count($categories) ?></strong>
+        <strong id="categoryCount"><?= count($categoriesAll) ?></strong>
       </div>
       <div class="stats-card">
         <span>Événements</span>
-        <strong id="eventCount"><?= count($events) ?></strong>
+        <strong id="eventCount"><?= count($eventsAll) ?></strong>
       </div>
       <div class="stats-card">
         <span>Participants</span>
-        <strong id="participantCount"><?= count($participants) ?></strong>
+        <strong id="participantCount"><?= count($participantsAll) ?></strong>
       </div>
     </section>
 
@@ -115,6 +136,11 @@ try {
       <p class="kicker">Projet</p>
       <h2>Dashboord NutriSmart</h2>
       <p class="note">Cette page permet d’ajouter des catégories, des événements et des inscriptions avec des identifiants courts et propres. Chaque ajout reste synchronisé avec le front office.</p>
+      <?php if ($flashError !== ''): ?>
+        <p class="note">Erreur de saisie : <?= htmlspecialchars((string) $flashError, ENT_QUOTES, 'UTF-8') ?></p>
+      <?php elseif ($flashSuccess !== ''): ?>
+        <p class="note">Operation reussie.</p>
+      <?php endif; ?>
     </section>
 
     <section id="categorySection" class="panel">
@@ -125,31 +151,58 @@ try {
         </div>
       </div>
       <form id="categoryForm" class="form-grid two-columns" method="POST" action="../../Controller/NutrismartController.php?action=addCategory">
+        <input type="hidden" name="redirect" value="/nutrismart_evenement/View/BackOffice/index.php#categorySection" />
         <div>
           <label for="categoryName">Nom de la catégorie</label>
-          <input id="categoryName" name="name" required type="text" minlength="3" maxlength="80" placeholder="Ex : Nutrition sportive" />
+          <input id="categoryName" name="name" required type="text" minlength="3" maxlength="80" placeholder="Ex : Nutrition sportive" title="Le nom doit contenir entre 3 et 80 caracteres." />
         </div>
         <div>
           <label for="categoryDescription">Description</label>
-          <input id="categoryDescription" name="description" type="text" maxlength="255" placeholder="Courte description" />
+          <input id="categoryDescription" name="description" type="text" maxlength="255" placeholder="Courte description" title="La description ne doit pas depasser 255 caracteres." />
         </div>
         <button class="primary-btn" type="submit">Ajouter la catégorie</button>
       </form>
+      <div class="table-controls">
+        <div class="search-group">
+          <label for="catSearchId">Rechercher par ID</label>
+          <input id="catSearchId" type="number" min="1" placeholder="Ex: 1" value="<?= $catId !== null ? htmlspecialchars((string) $catId, ENT_QUOTES, 'UTF-8') : '' ?>" />
+        </div>
+        <div class="controls-actions">
+          <button class="primary-btn apply-btn" type="button" data-apply-table="categories">Appliquer</button>
+          <button class="primary-btn export-pdf-btn" type="button" data-export-table="categories">Exporter PDF</button>
+        </div>
+      </div>
       <div id="categoryTableContainer">
         <?php if ($loadError): ?>
-          <p class="note">Impossible de charger la base de donnees : <?= e($loadError) ?></p>
+          <p class="note">Impossible de charger la base de donnees : <?= htmlspecialchars((string) $loadError, ENT_QUOTES, 'UTF-8') ?></p>
         <?php else: ?>
           <div class="table-wrapper"><table class="table">
-            <thead><tr><th>ID</th><th>Nom</th><th>Description</th><th>Actions</th></tr></thead>
+            <thead>
+              <tr>
+                <th class="sortable" data-table="categories" data-sort="id">
+                  ID
+                  <?php if ($catSortNorm === 'id'): ?><span class="sort-indicator"><?= $catDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th class="sortable" data-table="categories" data-sort="name">
+                  Nom
+                  <?php if ($catSortNorm === 'name'): ?><span class="sort-indicator"><?= $catDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th class="sortable" data-table="categories" data-sort="description">
+                  Description
+                  <?php if ($catSortNorm === 'description'): ?><span class="sort-indicator"><?= $catDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th>Actions</th>
+              </tr>
+            </thead>
             <tbody>
-              <?php foreach ($categories as $category): ?>
+              <?php foreach ($categoriesTable as $category): ?>
                 <tr>
-                  <td><span class="id-badge"><?= e($category['id']) ?></span></td>
-                  <td><span class="small-badge"><?= e($category['name']) ?></span></td>
-                  <td><?= e($category['description'] ?: '-') ?></td>
+                  <td><span class="id-badge"><?= htmlspecialchars((string) $category['id'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                  <td><span class="small-badge"><?= htmlspecialchars((string) $category['name'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                  <td><?= htmlspecialchars((string) ($category['description'] ?: '-'), ENT_QUOTES, 'UTF-8') ?></td>
                   <td class="action-cell">
-	                    <button class="edit-btn" data-id="<?= e($category['id']) ?>" data-name="<?= e($category['name']) ?>" data-description="<?= e($category['description']) ?>" onclick="afficherModalModifCategorie(this)">Modifier</button>
-                    <button class="delete-btn" onclick="afficherConfirmSuppression('Supprimer la categorie <strong><?= e(addslashes($category['name'])) ?></strong> ? Ses evenements et participants seront aussi supprimes.', function(){ supprimerCategorie(<?= e($category['id']) ?>); })">Supprimer</button>
+	                    <button class="edit-btn" data-id="<?= htmlspecialchars((string) $category['id'], ENT_QUOTES, 'UTF-8') ?>" data-name="<?= htmlspecialchars((string) $category['name'], ENT_QUOTES, 'UTF-8') ?>" data-description="<?= htmlspecialchars((string) $category['description'], ENT_QUOTES, 'UTF-8') ?>" onclick="afficherModalModifCategorie(this)">Modifier</button>
+                    <button class="delete-btn" onclick="afficherConfirmSuppression('Supprimer la categorie <strong><?= htmlspecialchars((string) addslashes($category['name']), ENT_QUOTES, 'UTF-8') ?></strong> ? Ses evenements et participants seront aussi supprimes.', function(){ supprimerCategorie(<?= htmlspecialchars((string) $category['id'], ENT_QUOTES, 'UTF-8') ?>); })">Supprimer</button>
                   </td>
                 </tr>
               <?php endforeach; ?>
@@ -167,22 +220,23 @@ try {
         </div>
       </div>
       <form id="eventForm" class="form-grid two-columns" method="POST" action="../../Controller/NutrismartController.php?action=addEvent">
+        <input type="hidden" name="redirect" value="/nutrismart_evenement/View/BackOffice/index.php#eventSection" />
         <div>
           <label for="eventTitle">Titre</label>
-          <input id="eventTitle" name="title" required type="text" minlength="3" maxlength="120" placeholder="Nom de l'événement" />
+          <input id="eventTitle" name="title" required type="text" minlength="3" maxlength="120" placeholder="Nom de l'événement" title="Le titre doit contenir entre 3 et 120 caracteres." />
         </div>
         <div>
           <label for="eventCategory">Catégorie</label>
           <select id="eventCategory" name="categoryId" required>
             <option value="">Choisir une categorie</option>
-            <?php foreach ($categories as $category): ?>
-              <option value="<?= e($category['id']) ?>"><?= e($category['name']) ?></option>
+            <?php foreach ($categoriesAll as $category): ?>
+              <option value="<?= htmlspecialchars((string) $category['id'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) $category['name'], ENT_QUOTES, 'UTF-8') ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         <div>
           <label for="eventDate">Date</label>
-          <input id="eventDate" name="date" required type="date" />
+          <input id="eventDate" name="date" required type="date" min="<?= date('Y-m-d') ?>" />
         </div>
         <div>
           <label for="eventTime">Heure</label>
@@ -190,37 +244,71 @@ try {
         </div>
         <div>
           <label for="eventLocation">Lieu</label>
-          <input id="eventLocation" name="location" required type="text" minlength="3" maxlength="120" placeholder="Lieu" />
+          <input id="eventLocation" name="location" required type="text" minlength="3" maxlength="120" placeholder="Lieu" title="Le lieu doit contenir entre 3 et 120 caracteres." />
         </div>
         <div>
           <label for="eventSeats">Nombre de places</label>
-          <input id="eventSeats" name="seats" required type="number" min="1" placeholder="50" />
+          <input id="eventSeats" name="seats" required type="number" min="1" step="1" placeholder="50" title="Le nombre de places doit etre superieur a 0." />
         </div>
         <div class="full-width">
           <label for="eventDescription">Description</label>
-          <textarea id="eventDescription" name="description" required minlength="10" maxlength="1000" rows="4" placeholder="Description de l'événement"></textarea>
+          <textarea id="eventDescription" name="description" required minlength="10" maxlength="1000" rows="4" placeholder="Description de l'événement" title="La description doit contenir entre 10 et 1000 caracteres."></textarea>
         </div>
         <div class="full-width">
           <label for="eventImage">Image URL</label>
-          <input id="eventImage" name="image" type="url" placeholder="https://..." />
+          <input id="eventImage" name="image" type="url" placeholder="https://..." pattern="https?://.+" title="L URL doit commencer par http:// ou https://." />
         </div>
         <button class="primary-btn" type="submit">Ajouter l'événement</button>
       </form>
+      <div class="table-controls">
+        <div class="search-group">
+          <label for="evtSearchId">Rechercher par ID</label>
+          <input id="evtSearchId" type="number" min="1" placeholder="Ex: 1" value="<?= $evtId !== null ? htmlspecialchars((string) $evtId, ENT_QUOTES, 'UTF-8') : '' ?>" />
+        </div>
+        <div class="controls-actions">
+          <button class="primary-btn apply-btn" type="button" data-apply-table="events">Appliquer</button>
+          <button class="primary-btn export-pdf-btn" type="button" data-export-table="events">Exporter PDF</button>
+        </div>
+      </div>
       <div id="eventTableContainer">
         <?php if (!$loadError): ?>
           <div class="table-wrapper"><table class="table">
-            <thead><tr><th>ID</th><th>Titre</th><th>Categorie</th><th>Date</th><th>Lieu</th><th>Actions</th></tr></thead>
+            <thead>
+              <tr>
+                <th class="sortable" data-table="events" data-sort="id">
+                  ID
+                  <?php if ($evtSortNorm === 'id'): ?><span class="sort-indicator"><?= $evtDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th class="sortable" data-table="events" data-sort="title">
+                  Titre
+                  <?php if ($evtSortNorm === 'title'): ?><span class="sort-indicator"><?= $evtDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th class="sortable" data-table="events" data-sort="category">
+                  Categorie
+                  <?php if ($evtSortNorm === 'category'): ?><span class="sort-indicator"><?= $evtDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th class="sortable" data-table="events" data-sort="date">
+                  Date
+                  <?php if ($evtSortNorm === 'date'): ?><span class="sort-indicator"><?= $evtDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th class="sortable" data-table="events" data-sort="location">
+                  Lieu
+                  <?php if ($evtSortNorm === 'location'): ?><span class="sort-indicator"><?= $evtDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th>Actions</th>
+              </tr>
+            </thead>
             <tbody>
-              <?php foreach ($events as $event): ?>
+              <?php foreach ($eventsTable as $event): ?>
                 <tr>
-                  <td><span class="id-badge"><?= e($event['id']) ?></span></td>
-                  <td><?= e($event['title']) ?></td>
-                  <td><?= e(categoryNameById($categories, $event['categoryId'])) ?></td>
-                  <td><?= e(formatDateFr($event['date'])) ?></td>
-                  <td><?= e($event['location']) ?></td>
+                  <td><span class="id-badge"><?= htmlspecialchars((string) $event['id'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                  <td><?= htmlspecialchars((string) $event['title'], ENT_QUOTES, 'UTF-8') ?></td>
+                  <td><?= htmlspecialchars((string) $categoryController->categoryNameById($categoriesAll, $event['categoryId']), ENT_QUOTES, 'UTF-8') ?></td>
+                  <td><?= htmlspecialchars((string) $eventController->formatDateFr($event['date']), ENT_QUOTES, 'UTF-8') ?></td>
+                  <td><?= htmlspecialchars((string) $event['location'], ENT_QUOTES, 'UTF-8') ?></td>
                   <td class="action-cell">
-	                    <button class="edit-btn" data-id="<?= e($event['id']) ?>" data-title="<?= e($event['title']) ?>" data-category-id="<?= e($event['categoryId']) ?>" data-date="<?= e($event['date']) ?>" data-time="<?= e($event['time']) ?>" data-location="<?= e($event['location']) ?>" data-seats="<?= e($event['seats']) ?>" data-description="<?= e($event['description']) ?>" data-image="<?= e($event['image']) ?>" onclick="afficherModalModifEvenement(this)">Modifier</button>
-                    <button class="delete-btn" onclick="afficherConfirmSuppression('Supprimer <strong><?= e(addslashes($event['title'])) ?></strong> ? Ses participants seront aussi supprimes.', function(){ supprimerEvenement(<?= e($event['id']) ?>); })">Supprimer</button>
+	                    <button class="edit-btn" data-id="<?= htmlspecialchars((string) $event['id'], ENT_QUOTES, 'UTF-8') ?>" data-title="<?= htmlspecialchars((string) $event['title'], ENT_QUOTES, 'UTF-8') ?>" data-category-id="<?= htmlspecialchars((string) $event['categoryId'], ENT_QUOTES, 'UTF-8') ?>" data-date="<?= htmlspecialchars((string) $event['date'], ENT_QUOTES, 'UTF-8') ?>" data-time="<?= htmlspecialchars((string) $event['time'], ENT_QUOTES, 'UTF-8') ?>" data-location="<?= htmlspecialchars((string) $event['location'], ENT_QUOTES, 'UTF-8') ?>" data-seats="<?= htmlspecialchars((string) $event['seats'], ENT_QUOTES, 'UTF-8') ?>" data-description="<?= htmlspecialchars((string) $event['description'], ENT_QUOTES, 'UTF-8') ?>" data-image="<?= htmlspecialchars((string) $event['image'], ENT_QUOTES, 'UTF-8') ?>" onclick="afficherModalModifEvenement(this)">Modifier</button>
+                    <button class="delete-btn" onclick="afficherConfirmSuppression('Supprimer <strong><?= htmlspecialchars((string) addslashes($event['title']), ENT_QUOTES, 'UTF-8') ?></strong> ? Ses participants seront aussi supprimes.', function(){ supprimerEvenement(<?= htmlspecialchars((string) $event['id'], ENT_QUOTES, 'UTF-8') ?>); })">Supprimer</button>
                   </td>
                 </tr>
               <?php endforeach; ?>
@@ -237,24 +325,62 @@ try {
           <h2>Liste des participants</h2>
         </div>
       </div>
+      <div class="table-controls">
+        <div class="search-group">
+          <label for="parSearchId">Rechercher par ID</label>
+          <input id="parSearchId" type="number" min="1" placeholder="Ex: 1" value="<?= $parId !== null ? htmlspecialchars((string) $parId, ENT_QUOTES, 'UTF-8') : '' ?>" />
+        </div>
+        <div class="controls-actions">
+          <button class="primary-btn apply-btn" type="button" data-apply-table="participants">Appliquer</button>
+          <button class="primary-btn export-pdf-btn" type="button" data-export-table="participants">Exporter PDF</button>
+        </div>
+      </div>
       <div id="participantTableContainer">
-        <?php if (!$loadError && empty($participants)): ?>
+        <?php if (!$loadError && empty($participantsTable)): ?>
           <p class="note">Aucun participant enregistre pour le moment.</p>
         <?php elseif (!$loadError): ?>
           <div class="table-wrapper"><table class="table">
-            <thead><tr><th>ID</th><th>Participant</th><th>Email</th><th>Telephone</th><th>Evenement</th><th>Inscrit le</th><th>Actions</th></tr></thead>
+            <thead>
+              <tr>
+                <th class="sortable" data-table="participants" data-sort="id">
+                  ID
+                  <?php if ($parSortNorm === 'id'): ?><span class="sort-indicator"><?= $parDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th class="sortable" data-table="participants" data-sort="fullName">
+                  Participant
+                  <?php if ($parSortNorm === 'fullname'): ?><span class="sort-indicator"><?= $parDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th class="sortable" data-table="participants" data-sort="email">
+                  Email
+                  <?php if ($parSortNorm === 'email'): ?><span class="sort-indicator"><?= $parDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th class="sortable" data-table="participants" data-sort="phone">
+                  Telephone
+                  <?php if ($parSortNorm === 'phone'): ?><span class="sort-indicator"><?= $parDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th class="sortable" data-table="participants" data-sort="event">
+                  Evenement
+                  <?php if ($parSortNorm === 'event'): ?><span class="sort-indicator"><?= $parDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th class="sortable" data-table="participants" data-sort="registeredAt">
+                  Inscrit le
+                  <?php if ($parSortNorm === 'registeredat'): ?><span class="sort-indicator"><?= $parDirNorm === 'DESC' ? '▼' : '▲' ?></span><?php endif; ?>
+                </th>
+                <th>Actions</th>
+              </tr>
+            </thead>
             <tbody>
-              <?php foreach ($participants as $participant): ?>
+              <?php foreach ($participantsTable as $participant): ?>
                 <tr>
-                  <td><span class="id-badge"><?= e($participant['id']) ?></span></td>
-                  <td><?= e($participant['fullName']) ?></td>
-                  <td><?= e($participant['email']) ?></td>
-                  <td><?= e($participant['phone']) ?></td>
-                  <td><?= e(eventTitleById($events, $participant['eventId'])) ?></td>
-                  <td><?= e($participant['registeredAt']) ?></td>
+                  <td><span class="id-badge"><?= htmlspecialchars((string) $participant['id'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                  <td><?= htmlspecialchars((string) $participant['fullName'], ENT_QUOTES, 'UTF-8') ?></td>
+                  <td><?= htmlspecialchars((string) $participant['email'], ENT_QUOTES, 'UTF-8') ?></td>
+                  <td><?= htmlspecialchars((string) $participant['phone'], ENT_QUOTES, 'UTF-8') ?></td>
+                  <td><?= htmlspecialchars((string) $eventController->eventTitleById($eventsAll, $participant['eventId']), ENT_QUOTES, 'UTF-8') ?></td>
+                  <td><?= htmlspecialchars((string) $participant['registeredAt'], ENT_QUOTES, 'UTF-8') ?></td>
                   <td class="action-cell">
-	                    <button class="edit-btn" data-id="<?= e($participant['id']) ?>" data-full-name="<?= e($participant['fullName']) ?>" data-email="<?= e($participant['email']) ?>" data-phone="<?= e($participant['phone']) ?>" data-event-id="<?= e($participant['eventId']) ?>" onclick="afficherModalModifParticipant(this)">Modifier</button>
-                    <button class="delete-btn" onclick="afficherConfirmSuppression('Supprimer le participant <strong><?= e(addslashes($participant['fullName'])) ?></strong> ?', function(){ supprimerParticipant(<?= e($participant['id']) ?>); })">Supprimer</button>
+	                    <button class="edit-btn" data-id="<?= htmlspecialchars((string) $participant['id'], ENT_QUOTES, 'UTF-8') ?>" data-full-name="<?= htmlspecialchars((string) $participant['fullName'], ENT_QUOTES, 'UTF-8') ?>" data-email="<?= htmlspecialchars((string) $participant['email'], ENT_QUOTES, 'UTF-8') ?>" data-phone="<?= htmlspecialchars((string) $participant['phone'], ENT_QUOTES, 'UTF-8') ?>" data-event-id="<?= htmlspecialchars((string) $participant['eventId'], ENT_QUOTES, 'UTF-8') ?>" onclick="afficherModalModifParticipant(this)">Modifier</button>
+                    <button class="delete-btn" onclick="afficherConfirmSuppression('Supprimer le participant <strong><?= htmlspecialchars((string) addslashes($participant['fullName']), ENT_QUOTES, 'UTF-8') ?></strong> ?', function(){ supprimerParticipant(<?= htmlspecialchars((string) $participant['id'], ENT_QUOTES, 'UTF-8') ?>); })">Supprimer</button>
                   </td>
                 </tr>
               <?php endforeach; ?>
@@ -266,11 +392,11 @@ try {
 	  </main>
 
 	  <select id="eventOptionsSource" hidden>
-	    <?php foreach ($events as $event): ?>
-	      <option value="<?= e($event['id']) ?>"><?= e($event['title']) ?></option>
+	    <?php foreach ($eventsAll as $event): ?>
+	      <option value="<?= htmlspecialchars((string) $event['id'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) $event['title'], ENT_QUOTES, 'UTF-8') ?></option>
 	    <?php endforeach; ?>
 	  </select>
 
-	  <script src="script.js?v=20260415-clean"></script>
+	  <script src="script.js?v=20260429-tri-search"></script>
 </body>
 </html>

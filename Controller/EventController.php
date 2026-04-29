@@ -33,26 +33,120 @@ class EventController {
         return $events;
     }
 
+    public function formatDateFr($date) {
+        if (!$date) {
+            return '-';
+        }
+
+        $timestamp = strtotime($date);
+        return $timestamp ? date('d/m/Y', $timestamp) : '-';
+    }
+
+    public function eventTitleById($events, $eventId) {
+        foreach ($events as $event) {
+            if ((int) $event['id'] === (int) $eventId) {
+                return $event['title'];
+            }
+        }
+
+        return 'Evenement introuvable';
+    }
+
+    /**
+     * Recherche exacte par id + tri securise via whitelist.
+     * Le parametre $id correspond a id_evenement.
+     *
+     * @param int|null $id
+     * @param string $sortField
+     * @param string $sortDir
+     * @return array
+     */
+    public function searchByIdAndSort(?int $id, string $sortField = 'id', string $sortDir = 'ASC'): array
+    {
+        $sortDir = strtoupper(trim((string) $sortDir));
+        if (!in_array($sortDir, ['ASC', 'DESC'], true)) {
+            $sortDir = 'ASC';
+        }
+
+        $sortField = strtolower(trim((string) $sortField));
+
+        $sortMap = [
+            'id' => 'e.id_evenement',
+            'title' => 'e.titre',
+            'category' => 'c.nom_categorie',
+            'date' => 'e.date_evenement',
+            'location' => 'e.lieu',
+        ];
+
+        $sortColumn = $sortMap[$sortField] ?? $sortMap['id'];
+        $needsCategoryJoin = $sortField === 'category';
+
+        $sql = "SELECT
+                    e.id_evenement AS id,
+                    e.titre AS title,
+                    e.description,
+                    e.date_evenement AS date,
+                    e.heure_evenement AS time,
+                    e.lieu AS location,
+                    e.image,
+                    e.id_categorie AS categoryId,
+                    e.places AS seats
+                FROM evenement e";
+
+        if ($needsCategoryJoin) {
+            $sql .= " LEFT JOIN categorie c ON c.id_categorie = e.id_categorie";
+        }
+
+        $params = [];
+        if ($id !== null && $id > 0) {
+            $sql .= " WHERE e.id_evenement = ?";
+            $params[] = $id;
+        }
+
+        $sql .= " ORDER BY {$sortColumn} {$sortDir}";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $events = $stmt->fetchAll();
+
+        foreach ($events as &$event) {
+            $event['categoryId'] = (int) $event['categoryId'];
+            $event['seats'] = (int) $event['seats'];
+            if (empty($event['image'])) {
+                $event['image'] = self::DEFAULT_EVENT_IMAGE;
+            }
+        }
+        unset($event);
+
+        return $events;
+    }
+
     public function add($data) {
-        $this->validate($data);
+        $event = $this->prepareEventData($data);
+        if (!$this->categoryExists($event['categoryId'])) {
+            throw new InvalidArgumentException('La categorie choisie est introuvable.');
+        }
         $stmt = $this->pdo->prepare(
             "INSERT INTO evenement (titre, description, date_evenement, heure_evenement, lieu, image, id_categorie, places)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute(array(
-            trim($data['title'] ?? ''),
-            trim($data['description'] ?? ''),
-            $data['date'] ?? '',
-            $data['time'] ?? null,
-            trim($data['location'] ?? ''),
-            trim($data['image'] ?? ''),
-            (int) ($data['categoryId'] ?? 0),
-            (int) ($data['seats'] ?? 0)
+            $event['title'],
+            $event['description'],
+            $event['date'],
+            $event['time'],
+            $event['location'],
+            $event['image'],
+            $event['categoryId'],
+            $event['seats']
         ));
     }
 
     public function update($data) {
-        $this->validate($data);
+        $event = $this->prepareEventData($data);
+        if (!$this->categoryExists($event['categoryId'])) {
+            throw new InvalidArgumentException('La categorie choisie est introuvable.');
+        }
         $stmt = $this->pdo->prepare(
             "UPDATE evenement
              SET titre = ?, description = ?, date_evenement = ?, heure_evenement = ?,
@@ -60,14 +154,14 @@ class EventController {
              WHERE id_evenement = ?"
         );
         $stmt->execute(array(
-            trim($data['title'] ?? ''),
-            trim($data['description'] ?? ''),
-            $data['date'] ?? '',
-            $data['time'] ?? null,
-            trim($data['location'] ?? ''),
-            trim($data['image'] ?? ''),
-            (int) ($data['categoryId'] ?? 0),
-            (int) ($data['seats'] ?? 0),
+            $event['title'],
+            $event['description'],
+            $event['date'],
+            $event['time'],
+            $event['location'],
+            $event['image'],
+            $event['categoryId'],
+            $event['seats'],
             $this->requireId($data)
         ));
     }
@@ -105,43 +199,17 @@ class EventController {
         return $id;
     }
 
-    private function validate($data) {
-        $title = trim($data['title'] ?? '');
-        $description = trim($data['description'] ?? '');
-        $date = $data['date'] ?? '';
-        $time = $data['time'] ?? '';
-        $location = trim($data['location'] ?? '');
-        $image = trim($data['image'] ?? '');
-        $categoryId = (int) ($data['categoryId'] ?? 0);
-        $seats = (int) ($data['seats'] ?? 0);
-
-        if (strlen($title) < 3 || strlen($title) > 120) {
-            throw new InvalidArgumentException('Le titre doit contenir entre 3 et 120 caracteres.');
-        }
-        if ($categoryId <= 0) {
-            throw new InvalidArgumentException('Veuillez choisir une categorie.');
-        }
-        if (!$this->categoryExists($categoryId)) {
-            throw new InvalidArgumentException('La categorie choisie est introuvable.');
-        }
-        if (!$this->validDate($date)) {
-            throw new InvalidArgumentException('Veuillez saisir une date valide.');
-        }
-        if (!$this->validTime($time)) {
-            throw new InvalidArgumentException('Veuillez saisir une heure valide.');
-        }
-        if (strlen($location) < 3 || strlen($location) > 120) {
-            throw new InvalidArgumentException('Le lieu doit contenir entre 3 et 120 caracteres.');
-        }
-        if ($seats < 1) {
-            throw new InvalidArgumentException('Le nombre de places doit etre superieur a 0.');
-        }
-        if (strlen($description) < 10 || strlen($description) > 1000) {
-            throw new InvalidArgumentException('La description doit contenir entre 10 et 1000 caracteres.');
-        }
-        if ($image !== '' && !filter_var($image, FILTER_VALIDATE_URL)) {
-            throw new InvalidArgumentException('L URL de l image est invalide.');
-        }
+    private function prepareEventData($data) {
+        return array(
+            'title' => trim((string) ($data['title'] ?? '')),
+            'description' => trim((string) ($data['description'] ?? '')),
+            'date' => isset($data['date']) ? (string) $data['date'] : '',
+            'time' => isset($data['time']) && $data['time'] !== '' ? (string) $data['time'] : null,
+            'location' => trim((string) ($data['location'] ?? '')),
+            'image' => trim((string) ($data['image'] ?? '')),
+            'categoryId' => (int) ($data['categoryId'] ?? 0),
+            'seats' => (int) ($data['seats'] ?? 0)
+        );
     }
 
     private function categoryExists($categoryId) {
@@ -150,13 +218,5 @@ class EventController {
         return (int) $stmt->fetchColumn() > 0;
     }
 
-    private function validDate($date) {
-        $parts = explode('-', $date);
-        return count($parts) === 3 && checkdate((int) $parts[1], (int) $parts[2], (int) $parts[0]);
-    }
-
-    private function validTime($time) {
-        return (bool) preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/', (string) $time);
-    }
 }
 ?>

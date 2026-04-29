@@ -110,6 +110,11 @@
     var form = document.createElement('form');
     form.method = 'POST';
     form.action = CONTROLLER_URL + '?action=' + encodeURIComponent(action);
+    data = data || {};
+
+    if (!Object.prototype.hasOwnProperty.call(data, 'redirect')) {
+      data.redirect = window.location.pathname + window.location.hash;
+    }
 
     var champs = Object.keys(data || {});
     for (var i = 0; i < champs.length; i++) {
@@ -162,12 +167,12 @@
     var modal = document.createElement('div');
     modal.id = 'editModal';
     modal.innerHTML =
-      '<div class="confirm-overlay">' +
+          '<div class="confirm-overlay">' +
         '<div class="confirm-box edit-box">' +
           '<h3>Modifier la categorie</h3>' +
           '<div class="form-grid">' +
-            '<div><label>Nom</label><input id="mCatNom" type="text" value="' + echapperHtml(bouton.dataset.name) + '" /></div>' +
-            '<div><label>Description</label><input id="mCatDesc" type="text" value="' + echapperHtml(bouton.dataset.description) + '" /></div>' +
+            '<div><label>Nom</label><input id="mCatNom" type="text" minlength="3" maxlength="80" title="Le nom doit contenir entre 3 et 80 caracteres." value="' + echapperHtml(bouton.dataset.name) + '" /></div>' +
+            '<div><label>Description</label><input id="mCatDesc" type="text" maxlength="255" title="La description ne doit pas depasser 255 caracteres." value="' + echapperHtml(bouton.dataset.description) + '" /></div>' +
           '</div>' +
           '<div class="confirm-actions">' +
             '<button class="cancel-btn" id="annulerModif">Annuler</button>' +
@@ -199,14 +204,14 @@
         '<div class="confirm-box edit-box">' +
           '<h3>Modifier l evenement</h3>' +
           '<div class="form-grid two-columns">' +
-            '<div><label>Titre</label><input id="mEvTitre" type="text" value="' + echapperHtml(bouton.dataset.title) + '" /></div>' +
+            '<div><label>Titre</label><input id="mEvTitre" type="text" minlength="3" maxlength="120" title="Le titre doit contenir entre 3 et 120 caracteres." value="' + echapperHtml(bouton.dataset.title) + '" /></div>' +
             '<div><label>Categorie</label><select id="mEvCat">' + optionsCat + '</select></div>' +
-            '<div><label>Date</label><input id="mEvDate" type="date" value="' + echapperHtml(bouton.dataset.date) + '" /></div>' +
+            '<div><label>Date</label><input id="mEvDate" type="date" min="' + new Date().toISOString().split('T')[0] + '" value="' + echapperHtml(bouton.dataset.date) + '" /></div>' +
             '<div><label>Heure</label><input id="mEvHeure" type="time" value="' + echapperHtml(bouton.dataset.time) + '" /></div>' +
-            '<div><label>Lieu</label><input id="mEvLieu" type="text" value="' + echapperHtml(bouton.dataset.location) + '" /></div>' +
-            '<div><label>Places</label><input id="mEvPlaces" type="number" min="1" value="' + echapperHtml(bouton.dataset.seats) + '" /></div>' +
-            '<div class="full-width"><label>Description</label><textarea id="mEvDesc" rows="3">' + echapperHtml(bouton.dataset.description) + '</textarea></div>' +
-            '<div class="full-width"><label>Image URL</label><input id="mEvImage" type="url" value="' + echapperHtml(bouton.dataset.image) + '" /></div>' +
+            '<div><label>Lieu</label><input id="mEvLieu" type="text" minlength="3" maxlength="120" title="Le lieu doit contenir entre 3 et 120 caracteres." value="' + echapperHtml(bouton.dataset.location) + '" /></div>' +
+            '<div><label>Places</label><input id="mEvPlaces" type="number" min="1" step="1" title="Le nombre de places doit etre superieur a 0." value="' + echapperHtml(bouton.dataset.seats) + '" /></div>' +
+            '<div class="full-width"><label>Description</label><textarea id="mEvDesc" rows="3" minlength="10" maxlength="1000" title="La description doit contenir entre 10 et 1000 caracteres.">' + echapperHtml(bouton.dataset.description) + '</textarea></div>' +
+            '<div class="full-width"><label>Image URL</label><input id="mEvImage" type="url" pattern="https?://.+" title="L URL doit commencer par http:// ou https://." value="' + echapperHtml(bouton.dataset.image) + '" /></div>' +
           '</div>' +
           '<div class="confirm-actions">' +
             '<button class="cancel-btn" id="annulerModif">Annuler</button>' +
@@ -245,9 +250,9 @@
         '<div class="confirm-box edit-box">' +
           '<h3>Modifier le participant</h3>' +
           '<div class="form-grid two-columns">' +
-            '<div><label>Nom complet</label><input id="mPNom" type="text" value="' + echapperHtml(bouton.dataset.fullName) + '" /></div>' +
-            '<div><label>Email</label><input id="mPEmail" type="email" value="' + echapperHtml(bouton.dataset.email) + '" /></div>' +
-            '<div><label>Telephone</label><input id="mPTel" type="text" minlength="8" maxlength="8" pattern="[2459][0-9]{7}" value="' + echapperHtml(bouton.dataset.phone) + '" /></div>' +
+            '<div><label>Nom complet</label><input id="mPNom" type="text" minlength="3" maxlength="120" title="Le nom complet doit contenir entre 3 et 120 caracteres." value="' + echapperHtml(bouton.dataset.fullName) + '" /></div>' +
+            '<div><label>Email</label><input id="mPEmail" type="email" title="Veuillez saisir une adresse email valide." value="' + echapperHtml(bouton.dataset.email) + '" /></div>' +
+            '<div><label>Telephone</label><input id="mPTel" type="text" minlength="8" maxlength="8" pattern="[2459][0-9]{7}" title="Le telephone doit contenir 8 chiffres et commencer par 2, 4, 5 ou 9." value="' + echapperHtml(bouton.dataset.phone) + '" /></div>' +
             '<div><label>Evenement</label><select id="mPEvent">' + optionsEv + '</select></div>' +
           '</div>' +
           '<div class="confirm-actions">' +
@@ -367,6 +372,109 @@
     window.history.replaceState(null, '', nouvelleUrl);
   }
 
+  function paramsToUrlWithHash(params) {
+    var base = window.location.pathname;
+    var query = params.toString();
+    var url = base;
+    if (query) url += '?' + query;
+    return url;
+  }
+
+  function tableMeta(tableKey) {
+    // map UI tableKey -> param prefix, input id, section anchor, export table name
+    if (tableKey === 'categories') {
+      return { prefix: 'cat_', inputId: 'catSearchId', anchor: '#categorySection', exportTable: 'categories' };
+    }
+    if (tableKey === 'events') {
+      return { prefix: 'evt_', inputId: 'evtSearchId', anchor: '#eventSection', exportTable: 'events' };
+    }
+    return { prefix: 'par_', inputId: 'parSearchId', anchor: '#participantSection', exportTable: 'participants' };
+  }
+
+  function initBackofficeTableControls() {
+    // Tri immédiat sur les en-têtes (reload page)
+    document.addEventListener('click', function(e) {
+      var th = e.target && e.target.closest ? e.target.closest('th.sortable[data-table][data-sort]') : null;
+      if (!th) return;
+
+      var tableKey = th.getAttribute('data-table');
+      var sortField = th.getAttribute('data-sort');
+      if (!tableKey || !sortField) return;
+
+      var meta = tableMeta(tableKey);
+      var params = new URLSearchParams(window.location.search);
+
+      var currentSort = params.get(meta.prefix + 'sort') || 'id';
+      var currentDir = (params.get(meta.prefix + 'dir') || 'ASC').toUpperCase();
+
+      var currentSortNorm = String(currentSort).toLowerCase();
+      var sortFieldNorm = String(sortField).toLowerCase();
+
+      var nextDir = 'ASC';
+      if (currentSortNorm === sortFieldNorm) {
+        nextDir = currentDir === 'ASC' ? 'DESC' : 'ASC';
+      }
+
+      params.set(meta.prefix + 'sort', sortField);
+      params.set(meta.prefix + 'dir', nextDir);
+
+      // Preserve already-applied search id param (meta.prefix + 'id') if present
+      var url = paramsToUrlWithHash(params) + meta.anchor;
+      window.location.href = url;
+    });
+
+    // Recherche par ID + reload page
+    var applyButtons = document.querySelectorAll('button.apply-btn[data-apply-table]');
+    applyButtons.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var tableKey = btn.getAttribute('data-apply-table');
+        if (!tableKey) return;
+
+        var meta = tableMeta(tableKey);
+        var params = new URLSearchParams(window.location.search);
+
+        var input = document.getElementById(meta.inputId);
+        var rawVal = input ? String(input.value || '').trim() : '';
+        if (rawVal !== '') {
+          params.set(meta.prefix + 'id', rawVal);
+        } else {
+          params.delete(meta.prefix + 'id');
+        }
+
+        // Ensure sort defaults if missing
+        if (!params.get(meta.prefix + 'sort')) params.set(meta.prefix + 'sort', 'id');
+        if (!params.get(meta.prefix + 'dir')) params.set(meta.prefix + 'dir', 'ASC');
+
+        var url = paramsToUrlWithHash(params) + meta.anchor;
+        window.location.href = url;
+      });
+    });
+
+    // Export PDF (print)
+    var exportButtons = document.querySelectorAll('button.export-pdf-btn[data-export-table]');
+    exportButtons.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var tableKey = btn.getAttribute('data-export-table');
+        if (!tableKey) return;
+
+        var meta = tableMeta(tableKey);
+        var params = new URLSearchParams(window.location.search);
+
+        var exportParams = new URLSearchParams();
+        exportParams.set('table', meta.exportTable);
+
+        var idVal = params.get(meta.prefix + 'id');
+        if (idVal) exportParams.set(meta.prefix + 'id', idVal);
+
+        exportParams.set(meta.prefix + 'sort', params.get(meta.prefix + 'sort') || 'id');
+        exportParams.set(meta.prefix + 'dir', params.get(meta.prefix + 'dir') || 'ASC');
+
+        var url = '/nutrismart_evenement/View/BackOffice/export.php?' + exportParams.toString();
+        window.open(url, '_blank');
+      });
+    });
+  }
+
   window.afficherConfirmSuppression = afficherConfirmSuppression;
   window.afficherModalModifCategorie = afficherModalModifCategorie;
   window.afficherModalModifEvenement = afficherModalModifEvenement;
@@ -379,4 +487,5 @@
   afficherAnimationSucces(success);
   if (success !== '') nettoyerParametreSucces();
   initMenuActif();
+  initBackofficeTableControls();
 })();

@@ -26,31 +26,112 @@ class ParticipantController {
         return $participants;
     }
 
+    public function participantCountByEvent($participants, $eventId) {
+        $count = 0;
+
+        foreach ($participants as $participant) {
+            if ((int) $participant['eventId'] === (int) $eventId) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Recherche exacte par id + tri securise via whitelist.
+     * Le parametre $id correspond a id_participant.
+     *
+     * @param int|null $id
+     * @param string $sortField
+     * @param string $sortDir
+     * @return array
+     */
+    public function searchByIdAndSort(?int $id, string $sortField = 'id', string $sortDir = 'ASC'): array
+    {
+        $sortDir = strtoupper(trim((string) $sortDir));
+        if (!in_array($sortDir, ['ASC', 'DESC'], true)) {
+            $sortDir = 'ASC';
+        }
+
+        $sortField = strtolower(trim((string) $sortField));
+
+        $sortMap = [
+            'id' => 'p.id_participant',
+            'fullname' => 'p.nom',
+            'email' => 'p.email',
+            'phone' => 'p.telephone',
+            'event' => 'e.titre',
+            'registeredat' => 'p.date_inscription',
+        ];
+
+        $sortColumn = $sortMap[$sortField] ?? $sortMap['id'];
+        $needsEventJoin = $sortField === 'event';
+
+        $sql = "SELECT
+                    p.id_participant AS id,
+                    p.nom AS fullName,
+                    p.email AS email,
+                    p.telephone AS phone,
+                    p.id_evenement AS eventId,
+                    p.date_inscription AS registeredAt
+                FROM participant p";
+
+        if ($needsEventJoin) {
+            $sql .= " LEFT JOIN evenement e ON e.id_evenement = p.id_evenement";
+        }
+
+        $params = [];
+        if ($id !== null && $id > 0) {
+            $sql .= " WHERE p.id_participant = ?";
+            $params[] = $id;
+        }
+
+        $sql .= " ORDER BY {$sortColumn} {$sortDir}";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $participants = $stmt->fetchAll();
+
+        foreach ($participants as &$participant) {
+            $participant['eventId'] = (int) $participant['eventId'];
+        }
+        unset($participant);
+
+        return $participants;
+    }
+
     public function add($data) {
-        $this->validate($data);
+        $participant = $this->prepareParticipantData($data);
+        if (!$this->eventExists($participant['eventId'])) {
+            throw new InvalidArgumentException('L evenement choisi est introuvable.');
+        }
         $stmt = $this->pdo->prepare(
             "INSERT INTO participant (nom, email, telephone, id_evenement, date_inscription)
              VALUES (?, ?, ?, ?, CURDATE())"
         );
         $stmt->execute(array(
-            trim($data['fullName'] ?? ''),
-            trim($data['email'] ?? ''),
-            trim($data['phone'] ?? ''),
-            (int) ($data['eventId'] ?? 0)
+            $participant['fullName'],
+            $participant['email'],
+            $participant['phone'],
+            $participant['eventId']
         ));
     }
 
     public function update($data) {
-        $this->validate($data);
+        $participant = $this->prepareParticipantData($data);
+        if (!$this->eventExists($participant['eventId'])) {
+            throw new InvalidArgumentException('L evenement choisi est introuvable.');
+        }
         $stmt = $this->pdo->prepare(
             "UPDATE participant SET nom = ?, email = ?, telephone = ?, id_evenement = ?
              WHERE id_participant = ?"
         );
         $stmt->execute(array(
-            trim($data['fullName'] ?? ''),
-            trim($data['email'] ?? ''),
-            trim($data['phone'] ?? ''),
-            (int) ($data['eventId'] ?? 0),
+            $participant['fullName'],
+            $participant['email'],
+            $participant['phone'],
+            $participant['eventId'],
             $this->requireId($data)
         ));
     }
@@ -81,27 +162,13 @@ class ParticipantController {
         return $id;
     }
 
-    private function validate($data) {
-        $fullName = trim($data['fullName'] ?? '');
-        $email = trim($data['email'] ?? '');
-        $phone = trim($data['phone'] ?? '');
-        $eventId = (int) ($data['eventId'] ?? 0);
-
-        if (strlen($fullName) < 3 || strlen($fullName) > 120) {
-            throw new InvalidArgumentException('Le nom complet doit contenir entre 3 et 120 caracteres.');
-        }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new InvalidArgumentException('Veuillez saisir une adresse email valide.');
-        }
-        if (!preg_match('/^[2459][0-9]{7}$/', $phone)) {
-            throw new InvalidArgumentException('Le telephone doit contenir 8 chiffres et commencer par 2, 4, 5 ou 9.');
-        }
-        if ($eventId <= 0) {
-            throw new InvalidArgumentException('Veuillez choisir un evenement.');
-        }
-        if (!$this->eventExists($eventId)) {
-            throw new InvalidArgumentException('L evenement choisi est introuvable.');
-        }
+    private function prepareParticipantData($data) {
+        return array(
+            'fullName' => trim((string) ($data['fullName'] ?? '')),
+            'email' => trim((string) ($data['email'] ?? '')),
+            'phone' => trim((string) ($data['phone'] ?? '')),
+            'eventId' => (int) ($data['eventId'] ?? 0)
+        );
     }
 
     private function eventExists($eventId) {

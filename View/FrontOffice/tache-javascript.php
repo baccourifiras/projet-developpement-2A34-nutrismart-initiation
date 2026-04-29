@@ -60,41 +60,7 @@
       </div>
     </section>
   </main>
-
-  <script>
-    /* =====================================================
-       NAVBAR — animations et comportement au scroll
-       ===================================================== */
-    (function () {
-      var navbar = document.getElementById('navbar');
-
-      /* 1. Effet scroll : la navbar devient plus opaque et compacte */
-      window.addEventListener('scroll', function () {
-        if (window.scrollY > 50) {
-          navbar.classList.add('scrolled');
-        } else {
-          navbar.classList.remove('scrolled');
-        }
-      });
-
-      /* 2. Marquer le lien actif selon la page courante */
-      var currentPage = window.location.pathname.split('/').pop() || 'index.php';
-      document.querySelectorAll('.nav-links a').forEach(function (link) {
-        if (link.getAttribute('href') === currentPage) {
-          link.classList.add('active');
-        }
-      });
-
-      /* 3. Micro-animation au clic : effet ripple sur le lien cliqué */
-      document.querySelectorAll('.nav-links a').forEach(function (link) {
-        link.addEventListener('click', function () {
-          this.style.transform = 'scale(0.93)';
-          var self = this;
-          setTimeout(function () { self.style.transform = ''; }, 150);
-        });
-      });
-
-    })();
-  </script>
+  <script src="script.js?v=20260428-structure"></script>
 </body>
 </html>
+

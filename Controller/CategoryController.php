@@ -19,27 +19,47 @@ class CategoryController
         )->fetchAll();
     }
 
+    public function categoryNameById($categories, $categoryId)
+    {
+        foreach ($categories as $category) {
+            if ((int) $category['id'] === (int) $categoryId) {
+                return $category['name'];
+            }
+        }
+
+        return 'Sans categorie';
+    }
+
+    public function categoryInitials($name)
+    {
+        $words = preg_split('/\s+/', trim((string) $name));
+        $first = isset($words[0][0]) ? $words[0][0] : 'N';
+        $second = isset($words[1][0]) ? $words[1][0] : '';
+
+        return strtoupper($first . $second);
+    }
+
     public function add($data)
     {
-        $this->validate($data);
+        $category = $this->prepareCategoryData($data);
         $stmt = $this->pdo->prepare(
             "INSERT INTO categorie (nom_categorie, description) VALUES (?, ?)"
         );
         $stmt->execute(array(
-            trim($data['name'] ?? ''),
-            trim($data['description'] ?? '')
+            $category['name'],
+            $category['description']
         ));
     }
 
     public function update($data)
     {
-        $this->validate($data);
+        $category = $this->prepareCategoryData($data);
         $stmt = $this->pdo->prepare(
             "UPDATE categorie SET nom_categorie = ?, description = ? WHERE id_categorie = ?"
         );
         $stmt->execute(array(
-            trim($data['name'] ?? ''),
-            trim($data['description'] ?? ''),
+            $category['name'],
+            $category['description'],
             $this->requireId($data)
         ));
     }
@@ -63,6 +83,45 @@ class CategoryController
         $this->pdo->commit();
     }
 
+    /**
+     * Recherche exacte par id + tri securise via whitelist.
+     *
+     * @param int|null $id
+     * @param string $sortField
+     * @param string $sortDir
+     * @return array{array<string,mixed>}
+     */
+    public function searchByIdAndSort(?int $id, string $sortField = 'id', string $sortDir = 'ASC'): array
+    {
+        $sortDir = strtoupper(trim((string) $sortDir));
+        if (!in_array($sortDir, ['ASC', 'DESC'], true)) {
+            $sortDir = 'ASC';
+        }
+
+        // Map UI -> colonnes DB (whitelist)
+        $sortMap = [
+            'id' => 'id_categorie',
+            'name' => 'nom_categorie',
+            'description' => 'description',
+        ];
+        $sortColumn = $sortMap[$sortField] ?? 'id_categorie';
+
+        $sql = "SELECT id_categorie AS id, nom_categorie AS name, description
+                FROM categorie";
+        $params = [];
+
+        if ($id !== null && $id > 0) {
+            $sql .= " WHERE id_categorie = ?";
+            $params[] = $id;
+        }
+
+        $sql .= " ORDER BY {$sortColumn} {$sortDir}";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
     public function showCategory($category)
     {
         echo '<table border="1">';
@@ -84,20 +143,12 @@ class CategoryController
         return $id;
     }
 
-    private function validate($data)
+    private function prepareCategoryData($data)
     {
-        $name = trim($data['name'] ?? '');
-        $description = trim($data['description'] ?? '');
-
-        if (strlen($name) < 3) {
-            throw new InvalidArgumentException('Le nom de la categorie doit contenir au moins 3 caracteres.');
-        }
-        if (strlen($name) > 80) {
-            throw new InvalidArgumentException('Le nom de la categorie est trop long.');
-        }
-        if (strlen($description) > 255) {
-            throw new InvalidArgumentException('La description de la categorie est trop longue.');
-        }
+        return array(
+            'name' => trim((string) ($data['name'] ?? '')),
+            'description' => trim((string) ($data['description'] ?? ''))
+        );
     }
 }
 ?>

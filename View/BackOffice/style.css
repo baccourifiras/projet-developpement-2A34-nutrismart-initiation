@@ -608,3 +608,81 @@ textarea { min-height: 120px; resize: vertical; }
   border-radius: 999px;
   font-size: 14px;
 }
+
+/* ============================================================
+   BACKOFFICE — controles recherche/tri/export
+   ============================================================ */
+.table-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 16px 0 12px;
+}
+
+.search-group {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.controls-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: transform .18s ease, background .18s ease;
+}
+
+.table th.sortable:hover {
+  background: linear-gradient(180deg, #f0faf4, #e8f7ef);
+  transform: translateY(-1px);
+}
+
+.sort-indicator {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--primary-dark);
+  z-index: 2;
+}
+
+.table th.sortable::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 8px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(23, 153, 95, .55);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .18s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.table th.sortable:hover::after {
+  transform: scaleX(1);
+}
+
+@keyframes sortIndicatorBump {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+}
+
+.table th.sortable:hover .sort-indicator {
+  animation: sortIndicatorBump .25s ease both;
+}
+
+@media print {
+  .table-controls { display: none !important; }
+}
