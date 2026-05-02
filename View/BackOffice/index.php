@@ -70,17 +70,6 @@ try {
 } catch (Throwable $error) {
     $loadError = $error->getMessage();
 }
-/*
- * ============================================================
- * NutriSmart — Fichier PHP
- *
- * Pour l'instant ce fichier est une page HTML standard.
- * Quand le projet sera connecté à MySQL :
- *   - Remplacer les données JavaScript par des requêtes SQL
- *   - Exemple : $categories = $pdo->query("SELECT * FROM categories")->fetchAll();
- *   - Utiliser echo pour injecter les données dans la page
- * ============================================================
- */
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -133,9 +122,8 @@ try {
     </section>
 
     <section class="panel intro-panel">
-      <p class="kicker">Projet</p>
       <h2>Dashboord NutriSmart</h2>
-      <p class="note">Cette page permet d’ajouter des catégories, des événements et des inscriptions avec des identifiants courts et propres. Chaque ajout reste synchronisé avec le front office.</p>
+      <p class="note">Cette page permet d’ajouter des catégories, des événements et des inscriptions avec des identifiants courts et propres. Chaque ajout reste synchronisé avec le front office. et permet de rechercher et de trier les données ou de les exporter en PDF</p>
       <?php if ($flashError !== ''): ?>
         <p class="note">Erreur de saisie : <?= htmlspecialchars((string) $flashError, ENT_QUOTES, 'UTF-8') ?></p>
       <?php elseif ($flashSuccess !== ''): ?>

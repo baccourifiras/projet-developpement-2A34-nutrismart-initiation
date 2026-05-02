@@ -34,8 +34,7 @@ class CategoryController
     {
         $words = preg_split('/\s+/', trim((string) $name));
         $first = isset($words[0][0]) ? $words[0][0] : 'N';
-        $second = isset($words[1][0]) ? $words[1][0] : '';
-
+        $second = isset($words[1][0]) ? $words[1][0] : ''; 
         return strtoupper($first . $second);
     }
 

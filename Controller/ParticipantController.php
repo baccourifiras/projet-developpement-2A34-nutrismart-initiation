@@ -52,10 +52,8 @@ class ParticipantController {
         $sortDir = strtoupper(trim((string) $sortDir));
         if (!in_array($sortDir, ['ASC', 'DESC'], true)) {
             $sortDir = 'ASC';
-        }
-
+        }    
         $sortField = strtolower(trim((string) $sortField));
-
         $sortMap = [
             'id' => 'p.id_participant',
             'fullname' => 'p.nom',
@@ -67,7 +65,6 @@ class ParticipantController {
 
         $sortColumn = $sortMap[$sortField] ?? $sortMap['id'];
         $needsEventJoin = $sortField === 'event';
-
         $sql = "SELECT
                     p.id_participant AS id,
                     p.nom AS fullName,
