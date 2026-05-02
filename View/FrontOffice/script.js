@@ -138,6 +138,19 @@
       modal.classList.remove('hidden');
     }
 
+    function focusEventCard(eventId) {
+      var card = document.querySelector('.event-card[data-event-id="' + String(eventId) + '"]');
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.classList.add('is-focused');
+      setTimeout(function () { card.classList.remove('is-focused'); }, 1600);
+    }
+
+    function openParticipation(eventId, eventTitle) {
+      focusEventCard(eventId);
+      ouvrirModal({ dataset: { eventId: String(eventId || ''), eventTitle: String(eventTitle || '') } });
+    }
+
     function fermerModal() {
       modal.classList.add('hidden');
     }
@@ -246,10 +259,129 @@
     connecterBoutonsParticipation();
     filtrerEvenements();
     afficherAnimationSucces(lireParametre('success'));
+
+    window.openParticipationModal = openParticipation;
+  }
+
+  function initFrontCalendar() {
+    var wrapper = document.querySelector('.front-calendar-showcase[data-events-feed]');
+    var calendarEl = document.getElementById('frontCalendar');
+    if (!wrapper || !calendarEl || typeof FullCalendar === 'undefined') return;
+
+    var feedUrl = wrapper.getAttribute('data-events-feed') || '';
+    if (!feedUrl) return;
+
+    function toDateLabel(dateObj) {
+      var months = ['JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUIN', 'JUIL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC'];
+      return { day: dateObj.getDate(), mon: months[dateObj.getMonth()] || '' };
+    }
+
+    function toTime(startIso) {
+      if (!startIso || startIso.length < 16) return '';
+      return startIso.substring(11, 16);
+    }
+
+    function buildCards(events) {
+      var container = document.getElementById('frontCalendarCards');
+      if (!container) return;
+      container.innerHTML = '';
+
+      var now = new Date();
+      var upcoming = (events || [])
+        .map(function (e) { return { raw: e, start: e && e.start ? new Date(e.start) : null }; })
+        .filter(function (x) { return x.start && x.start >= now; })
+        .sort(function (a, b) { return a.start - b.start; })
+        .slice(0, 4);
+
+      if (!upcoming.length) {
+        var empty = document.createElement('div');
+        empty.className = 'front-calendar-empty';
+        empty.textContent = 'Aucun événement à venir.';
+        container.appendChild(empty);
+        return;
+      }
+
+      for (var i = 0; i < upcoming.length; i++) {
+        var e = upcoming[i].raw || {};
+        var label = toDateLabel(upcoming[i].start);
+        var time = toTime(e.start);
+        var location = (e.extendedProps && e.extendedProps.location) ? e.extendedProps.location : '';
+
+        var card = document.createElement('div');
+        card.className = 'front-mini-event';
+        card.innerHTML =
+          '<div class="front-mini-event-date"><span class="mon">' + label.mon + '</span><span class="day">' + label.day + '</span></div>' +
+          '<div class="front-mini-event-body">' +
+            '<h4 title="' + String(e.title || '').replace(/"/g, '&quot;') + '">' + (e.title || '') + '</h4>' +
+            '<div class="front-mini-event-meta">' +
+              (time ? ('<span class="pill">🕒 ' + time + '</span>') : '') +
+              (location ? ('<span class="pill">📍 ' + location + '</span>') : '') +
+            '</div>' +
+            '<button class="front-mini-event-btn" type="button" data-evt-id="' + (e.id || '') + '" data-evt-title="' + String(e.title || '').replace(/"/g, '&quot;') + '">Participer</button>' +
+          '</div>';
+        container.appendChild(card);
+      }
+    }
+
+    function loadCards() {
+      fetch(feedUrl)
+        .then(function (r) { return r.json(); })
+        .then(function (events) { buildCards(events); })
+        .catch(function () {});
+    }
+
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      locale: 'fr',
+      height: 'auto',
+      firstDay: 1,
+      nowIndicator: true,
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,listWeek'
+      },
+      eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+      events: { url: feedUrl, method: 'GET' },
+      eventClick: function (info) {
+        if (typeof window.openParticipationModal === 'function') {
+          window.openParticipationModal(info.event.id, info.event.title);
+        }
+      }
+    });
+
+    calendar.render();
+    loadCards();
+
+    var refreshBtn = document.getElementById('frontCalendarRefreshBtn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function () {
+        calendar.refetchEvents();
+        loadCards();
+      });
+    }
+
+    var cards = document.getElementById('frontCalendarCards');
+    if (cards) {
+      cards.addEventListener('click', function (ev) {
+        var btn = ev.target && ev.target.closest ? ev.target.closest('button.front-mini-event-btn[data-evt-id]') : null;
+        if (!btn) return;
+        if (typeof window.openParticipationModal === 'function') {
+          window.openParticipationModal(btn.getAttribute('data-evt-id'), btn.getAttribute('data-evt-title'));
+        }
+      });
+    }
+
+    // Sync auto: utile après ajout d’un événement depuis le dashboard
+    setInterval(function () {
+      calendar.refetchEvents();
+      loadCards();
+    }, 60000);
   }
 
   initNavbar();
   appliquerDelaisReveal();
   initPageEvenements();
+  initFrontCalendar();
   activerAnimations();
 })();

@@ -37,6 +37,7 @@ try {
   <title>NutriSmart - Front Office Événements</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.20/index.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -52,6 +53,7 @@ try {
     <div class="nav-links">
       <a href="accueil.php">Accueil</a>
       <a href="index.php">Événements</a>
+      <a href="index.php#calendar">Calendrier</a>
       <a href="tache-categories.php">Tâche 1</a>
       <a href="tache-evenements.php">Tâche 2</a>
       <a href="tache-participants.php">Tâche 3</a>
@@ -118,7 +120,7 @@ try {
           <div class="no-data reveal visible">Aucun evenement disponible.</div>
         <?php else: ?>
           <?php foreach ($events as $index => $event): ?>
-            <article class="event-card reveal" data-category-id="<?= htmlspecialchars((string) $event['categoryId'], ENT_QUOTES, 'UTF-8') ?>" data-reveal-delay="<?= (int) $index * 90 ?>">
+            <article class="event-card reveal" data-event-id="<?= htmlspecialchars((string) $event['id'], ENT_QUOTES, 'UTF-8') ?>" data-category-id="<?= htmlspecialchars((string) $event['categoryId'], ENT_QUOTES, 'UTF-8') ?>" data-reveal-delay="<?= (int) $index * 90 ?>">
               <img class="event-image" src="<?= htmlspecialchars((string) $event['image'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) $event['title'], ENT_QUOTES, 'UTF-8') ?>">
               <div class="event-content">
                 <span class="event-badge"><?= htmlspecialchars((string) $categoryController->categoryNameById($categories, $event['categoryId']), ENT_QUOTES, 'UTF-8') ?></span>
@@ -135,6 +137,26 @@ try {
             </article>
           <?php endforeach; ?>
         <?php endif; ?>
+      </div>
+    </section>
+
+    <section id="calendar" class="section">
+      <div class="section-title-row">
+        <div>
+          <p class="section-kicker">Calendrier</p>
+          <h2>Calendrier des événements</h2>
+        </div>
+        <button type="button" class="secondary-btn" id="frontCalendarRefreshBtn">Actualiser</button>
+      </div>
+      <div class="front-calendar-showcase" data-events-feed="/nutrismart_evenement/View/FrontOffice/events_feed.php">
+        <div class="front-calendar-cards">
+          <div class="front-calendar-cards-head">
+            <h3>À venir</h3>
+            <p>Clique sur un événement pour voir les détails et t’inscrire.</p>
+          </div>
+          <div id="frontCalendarCards" class="front-calendar-cards-grid"></div>
+        </div>
+        <div id="frontCalendar" class="front-calendar-root"></div>
       </div>
     </section>
 
@@ -195,6 +217,7 @@ try {
       <span>Votre inscription a ete ajoutee avec succes.</span>
     </div>
   <?php endif; ?>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.20/index.global.min.js"></script>
   <script src="script.js?v=20260428-structure"></script>
 </body>
 </html>
