@@ -17,8 +17,19 @@
         </div>
         <div class="nav-links">
             <a href="index.php" class="active">Accueil</a>
+            <a href="index.php?page=wishlist">Favoris</a>
             <a href="index.php?page=backoffice&action=list" class="nav-dashboard">BackOffice</a>
             <a href="index.php?page=commande&action=list">Commandes</a>
+            <button onclick="ouvrirPanier()" class="panier-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                <span id="panierBadge" class="panier-badge">0</span>
+            </button>
+            <button onclick="window.location.href='index.php?page=wishlist'" class="wishlist-nav-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                <span id="wishlistBadge" class="wishlist-badge">0</span>
+            </button>
         </div>
     </nav>
 
@@ -110,11 +121,17 @@
                             'multi' => 'Multi-régimes'
                         ][$produit->getRegimeCible()] ?? $produit->getRegimeCible();
                         
+                        
                         echo "<article class='product-card reveal' data-categorie='{$produit->getCategorie()}' data-regime='{$produit->getRegimeCible()}' data-nom='" . strtolower($produit->getNom()) . "' data-prix='{$produit->getPrix()}'>";
                         echo "<div class='product-content'>";
+                        echo "<div class='product-header-row'>";
                         echo "<div class='product-badges'>";
                         echo "<span class='small-badge'>{$categorieLabel}</span>";
                         echo "<span class='small-badge'>{$regimeLabel}</span>";
+                        echo "</div>";
+                        echo "<button class='wishlist-heart-btn' data-product-id='{$produit->getIdProduit()}' onclick='toggleWishlist({id: {$produit->getIdProduit()}, nom: \"" . addslashes($produit->getNom()) . "\", prix: {$produit->getPrix()}, categorie: \"{$categorieLabel}\", regime: \"{$regimeLabel}\", description: \"" . addslashes(substr($produit->getDescription(), 0, 200)) . "\"})'>";
+                        echo "<svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'/></svg>";
+                        echo "</button>";
                         echo "</div>";
                         echo "<h3>{$produit->getNom()}</h3>";
                         echo "<p class='product-description'>" . substr($produit->getDescription(), 0, 120) . "...</p>";
@@ -122,7 +139,10 @@
                         echo "<span class='product-type'>{$produit->getTypeVente()}</span>";
                         echo "<span class='product-price'>{$produit->getPrix()} TND</span>";
                         echo "</div>";
-                        echo "<a href='index.php?page=detail&id={$produit->getIdProduit()}' class='primary-btn'>Voir détail</a>";
+                        echo "<div class='product-actions'>";
+                        echo "<button onclick='ajouterAuPanier({id: {$produit->getIdProduit()}, nom: \"" . addslashes($produit->getNom()) . "\", prix: {$produit->getPrix()}, categorie: \"{$categorieLabel}\", regime: \"{$regimeLabel}\"})' class='primary-btn'>Ajouter au panier</button>";
+                        echo "<a href='index.php?page=detail&id={$produit->getIdProduit()}' class='secondary-btn-small'>Détails</a>";
+                        echo "</div>";
                         echo "</div>";
                         echo "</article>";
                     }
@@ -133,6 +153,32 @@
         </section>
     </div>
 
+    <!-- MODAL PANIER -->
+    <div id="panierModal" class="modal hidden">
+        <div class="modal-card panier-modal">
+            <button onclick="fermerPanier()" class="close-btn">×</button>
+            <h2>Mon Panier</h2>
+            <div id="panierItems" class="panier-items-container">
+                <!-- Items will be inserted here by JavaScript -->
+            </div>
+            <div class="panier-footer">
+                <div class="panier-total">
+                    <span>Total:</span>
+                    <span id="panierTotal" class="total-price">0.00 TND</span>
+                </div>
+                <div class="panier-actions">
+                    <button onclick="viderPanier()" class="secondary-btn">Vider le panier</button>
+                    <button onclick="validerCommande()" class="primary-btn">Valider la commande</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="public/js/panier.js"></script>
+    <script src="public/js/wishlist.js"></script>
+    <script src="public/js/smart-search.js"></script>
+    <script src="config/groq-config.js"></script>
+    <script src="public/js/chatbot.js"></script>
     <script>
         // Filtrage des produits
         function filterProducts() {

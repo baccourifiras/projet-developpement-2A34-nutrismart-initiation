@@ -17,8 +17,19 @@
         </div>
         <div class="nav-links">
             <a href="index.php">Accueil</a>
+            <a href="index.php?page=wishlist">Favoris</a>
             <a href="index.php?page=backoffice&action=list" class="nav-dashboard">BackOffice</a>
             <a href="index.php?page=commande&action=list">Commandes</a>
+            <button onclick="ouvrirPanier()" class="panier-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                <span id="panierBadge" class="panier-badge">0</span>
+            </button>
+            <button onclick="window.location.href='index.php?page=wishlist'" class="wishlist-nav-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                <span id="wishlistBadge" class="wishlist-badge">0</span>
+            </button>
         </div>
     </nav>
 
@@ -82,34 +93,14 @@
 
                 <?php if ($produit->getDisponible()): ?>
                 <div class="order-section">
-                    <h3>Commander ce produit</h3>
-                    <form method="POST" action="index.php?page=commande&action=add" class="form-grid two-columns">
-                        <input type="hidden" name="id_produit" value="<?= $produit->getIdProduit() ?>">
-                        <input type="hidden" name="prix_total" value="<?= $produit->getPrix() ?>">
-                        
-                        <div>
-                            <label for="id_utilisateur">ID Utilisateur *</label>
-                            <input type="number" id="id_utilisateur" name="id_utilisateur" value="1" required>
-                        </div>
-
-                        <div>
-                            <label for="quantite">Quantité *</label>
-                            <input type="number" id="quantite" name="quantite" value="1" min="1" required>
-                        </div>
-
-                        <div class="full-width">
-                            <label for="mode_paiement">Mode de paiement *</label>
-                            <select id="mode_paiement" name="mode_paiement" required>
-                                <option value="">-- Sélectionnez --</option>
-                                <option value="carte_bancaire">Carte Bancaire</option>
-                                <option value="paypal">PayPal</option>
-                                <option value="virement">Virement Bancaire</option>
-                            </select>
-                        </div>
-
-                        <button type="submit" class="primary-btn">Commander maintenant</button>
-                        <a href="index.php" class="secondary-btn">← Retour aux produits</a>
-                    </form>
+                    <h3>Ajouter au panier</h3>
+                    <div class="detail-actions">
+                        <button onclick="ajouterAuPanier({id: <?= $produit->getIdProduit() ?>, nom: '<?= addslashes($produit->getNom()) ?>', prix: <?= $produit->getPrix() ?>, categorie: '<?= $categorieLabel ?>', regime: '<?= $regimeLabel ?>'})" class="primary-btn large-btn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                            Ajouter au panier
+                        </button>
+                        <a href="index.php" class="secondary-btn large-btn">← Retour aux produits</a>
+                    </div>
                 </div>
                 <?php else: ?>
                 <div class="no-data">
@@ -125,6 +116,29 @@
         <?php endif; ?>
     </div>
 
+    <!-- MODAL PANIER -->
+    <div id="panierModal" class="modal hidden">
+        <div class="modal-card panier-modal">
+            <button onclick="fermerPanier()" class="close-btn">×</button>
+            <h2>Mon Panier</h2>
+            <div id="panierItems" class="panier-items-container">
+                <!-- Items will be inserted here by JavaScript -->
+            </div>
+            <div class="panier-footer">
+                <div class="panier-total">
+                    <span>Total:</span>
+                    <span id="panierTotal" class="total-price">0.00 TND</span>
+                </div>
+                <div class="panier-actions">
+                    <button onclick="viderPanier()" class="secondary-btn">Vider le panier</button>
+                    <button onclick="validerCommande()" class="primary-btn">Valider la commande</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="public/js/panier.js"></script>
+    <script src="public/js/wishlist.js"></script>
     <script>
         // Navbar scroll effect
         (function () {

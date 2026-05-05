@@ -8,14 +8,22 @@ Application web PHP MVC complète pour la gestion de produits nutritionnels adap
 - Page d'accueil avec liste de produits
 - Filtrage par catégorie et régime
 - Recherche en temps réel
+- Tri des produits (prix, nom)
 - Page détail produit
+- **🛒 Panier d'achat** (localStorage)
+  - Ajout de produits au panier
+  - Gestion des quantités
+  - Badge avec nombre d'articles
+  - Modal panier avec total
+  - Notifications toast
 - Système de commande
 
 ### BackOffice
 - Gestion CRUD complète des produits
-- Liste des commandes
+- Liste des commandes avec changement de statut
+- Recherche et tri dans les tables
 - Validation JavaScript multi-niveaux
-- Interface d'administration intuitive
+- Interface d'administration moderne
 
 ## 📋 Prérequis
 
@@ -79,9 +87,12 @@ NutriSmart/
 │       └── listCommandes.php  # Liste commandes
 └── public/
     ├── css/
-    │   └── style.css         # Styles CSS
+    │   ├── style.css         # Styles FrontOffice
+    │   └── backoffice.css    # Styles BackOffice
     └── js/
-        └── addProduit.js     # Validation JavaScript
+        ├── addProduit.js     # Validation JavaScript
+        ├── panier.js         # Gestion du panier
+        └── tableUtils.js     # Tri et recherche tables
 ```
 
 ## 🎯 Utilisation
@@ -97,7 +108,14 @@ NutriSmart/
 3. Remplissez le formulaire (validation en temps réel)
 4. Soumettez le formulaire
 
-### Passer une Commande
+### Utiliser le Panier
+1. Depuis le FrontOffice, cliquez sur "Ajouter au panier" sur un produit
+2. Le badge du panier se met à jour automatiquement
+3. Cliquez sur l'icône panier pour voir votre sélection
+4. Modifiez les quantités avec les boutons +/-
+5. Cliquez sur "Valider la commande" pour finaliser
+
+### Passer une Commande (ancienne méthode)
 1. Depuis le FrontOffice, cliquez sur un produit
 2. Cliquez sur "Voir détail"
 3. Remplissez le formulaire de commande
@@ -112,10 +130,13 @@ NutriSmart/
 
 ## 🎨 Design
 
-- Design moderne flat avec palette verte (#2E7D32)
+- Design moderne avec palette verte (#1fa463)
+- Navbar fixe avec effets de scroll
+- Glassmorphism et dégradés
+- Animations 3D sur les cartes
 - Responsive (CSS Grid & Flexbox)
 - Badges colorés pour les statuts
-- Effets hover sur les cartes produits
+- Effets hover et transitions fluides
 
 ## 📊 Base de Données
 

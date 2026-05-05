@@ -6,6 +6,25 @@ TEMPLATE_INTEGRATION_COMPLETE.md
 PATHS_REFERENCE.md
 INSTALLATION.txt
 
+# Local configuration files with API keys (DO NOT COMMIT)
+config/groq-config.local.js
+Util/StripeService.local.php
+*.local.js
+*.local.php
+
+# Environment files
+.env
+.env.local
+
 # OS files
 .DS_Store
 Thumbs.db
+
+# Vendor directory (if using Composer)
+vendor/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo

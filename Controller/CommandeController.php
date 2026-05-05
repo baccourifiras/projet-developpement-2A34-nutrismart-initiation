@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../Model/Commande.php';
+require_once __DIR__ . '/../Util/EmailService.php';
 
 /**
  * Contrôleur Commande
@@ -8,9 +9,11 @@ require_once __DIR__ . '/../Model/Commande.php';
  */
 class CommandeController {
     private $pdo;
+    private $emailService;
     
     public function __construct() {
         $this->pdo = Config::getConnexion();
+        $this->emailService = new EmailService();
     }
     
     /**
@@ -34,8 +37,9 @@ class CommandeController {
     /**
      * Ajoute une nouvelle commande
      * @param Commande $commande
+     * @param bool $sendEmail - Envoyer email de confirmation (défaut: false)
      */
-    public function addCommande($commande) {
+    public function addCommande($commande, $sendEmail = false) {
         try {
             $sql = "INSERT INTO commande (id_utilisateur, id_produit, quantite, prix_total, statut, mode_paiement) 
                     VALUES (:id_utilisateur, :id_produit, :quantite, :prix_total, :statut, :mode_paiement)";
@@ -50,7 +54,30 @@ class CommandeController {
                 'mode_paiement' => $commande->getModePaiement()
             ]);
             
-            return $this->pdo->lastInsertId();
+            $commandeId = $this->pdo->lastInsertId();
+            
+            // Envoyer l'email de confirmation seulement si demandé
+            if ($sendEmail) {
+                // Récupérer le nom du produit pour l'email
+                $sqlProduit = "SELECT nom FROM produit WHERE id_produit = :id";
+                $stmtProduit = $this->pdo->prepare($sqlProduit);
+                $stmtProduit->execute(['id' => $commande->getIdProduit()]);
+                $produit = $stmtProduit->fetch();
+                
+                $this->emailService->envoyerConfirmationCommande(
+                    'aniskontra123@gmail.com',
+                    'Client NutriSmart',
+                    [
+                        'id' => $commandeId,
+                        'produit' => $produit['nom'] ?? 'Produit',
+                        'quantite' => $commande->getQuantite(),
+                        'paiement' => $commande->getModePaiement(),
+                        'total' => $commande->getPrixTotal() . ' TND'
+                    ]
+                );
+            }
+            
+            return $commandeId;
         } catch (PDOException $e) {
             die("Erreur lors de l'ajout de la commande : " . $e->getMessage());
         }
@@ -69,6 +96,14 @@ class CommandeController {
                 'id' => $id,
                 'statut' => $statut
             ]);
+            
+            // Envoyer l'email de changement de statut
+            $this->emailService->envoyerChangementStatut(
+                'client@example.com', // TODO: Récupérer l'email réel du client
+                'Client NutriSmart',
+                ['id' => $id],
+                $statut
+            );
         } catch (PDOException $e) {
             die("Erreur lors de la mise à jour du statut : " . $e->getMessage());
         }
