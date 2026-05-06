@@ -1,0 +1,904 @@
+/* ============================================================
+   NutriSmart - Front office EXTRAS
+   /assets/css/front-extras.css
+
+   Complète style.css existant. Réutilise les variables CSS et
+   le ton vert/blanc du projet. N'écrase aucune règle existante.
+   ============================================================ */
+
+/* ---- Flash messages ---- */
+.flash-wrap {
+  position: fixed;
+  top: 80px; right: 24px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 360px;
+}
+.flash {
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 18px 40px rgba(15,45,30,.18);
+  animation: slideInFlash .4s ease both;
+}
+.flash-success { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+.flash-error   { background: linear-gradient(135deg, #ef4444, #b91c1c); color: #fff; }
+@keyframes slideInFlash {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* ---- Toolbar (recherche + filtres + tri) ---- */
+.toolbar {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  gap: 12px;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 26px;
+  box-shadow: var(--shadow);
+}
+.toolbar input,
+.toolbar select {
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fbfffc;
+  font-size: 14px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.toolbar input:focus,
+.toolbar select:focus {
+  outline: none;
+  border-color: rgba(31,164,99,.5);
+  box-shadow: 0 0 0 4px rgba(31,164,99,.12);
+}
+.toolbar .btn-reset {
+  padding: 11px 18px;
+  background: #f4f4f5;
+  color: #444;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s;
+}
+.toolbar .btn-reset:hover { background: #ececec; }
+@media (max-width: 900px) {
+  .toolbar { grid-template-columns: 1fr 1fr; }
+  .toolbar input:first-child { grid-column: 1 / -1; }
+}
+
+/* ---- Grille de cartes recettes ---- */
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin: 0 0 30px;
+}
+
+.recipe-card {
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s;
+  position: relative;
+}
+.recipe-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-hover);
+}
+.recipe-card-image {
+  width: 100%;
+  height: 200px;
+  background-size: cover;
+  background-position: center;
+  background-color: #e5f0e8;
+  position: relative;
+  overflow: hidden;
+}
+.recipe-card-image::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,.45) 100%);
+}
+.recipe-card-body {
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.recipe-card-body h3 {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.recipe-card-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.recipe-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.chip-time     { background: rgba(31,164,99,.12);   color: var(--primary-dark); }
+.chip-easy     { background: rgba(34,197,94,.15);   color: #166534; }
+.chip-medium   { background: rgba(245,158,11,.15);  color: #92400e; }
+.chip-hard     { background: rgba(239,68,68,.15);   color: #991b1b; }
+.chip-ingredients { background: rgba(139,92,246,.12); color: #5b21b6; }
+
+.recipe-card-footer {
+  padding: 12px 20px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(31,164,99,.08);
+}
+.btn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff !important;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform .2s, box-shadow .2s;
+}
+.btn-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(31,164,99,.32);
+}
+
+/* ---- Détail recette ---- */
+.detail-hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 30px;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin-bottom: 28px;
+}
+.detail-hero-image {
+  width: 100%;
+  min-height: 380px;
+  background-size: cover;
+  background-position: center;
+  background-color: #e5f0e8;
+}
+.detail-hero-body {
+  padding: 36px 38px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.detail-hero-body h1 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  color: var(--text);
+  margin: 0;
+}
+.detail-hero-body .description-block {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+@media (max-width: 800px) {
+  .detail-hero { grid-template-columns: 1fr; }
+  .detail-hero-image { min-height: 240px; }
+}
+
+/* ---- Liste d'ingrédients dans le détail ---- */
+.ingredient-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.ingredient-list li {
+  background: #fbfffc;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  transition: transform .2s, border-color .2s;
+}
+.ingredient-list li:hover {
+  transform: translateY(-2px);
+  border-color: rgba(31,164,99,.4);
+}
+.ingredient-list .ing-name { font-weight: 700; color: var(--text); }
+.ingredient-list .ing-qty  { color: var(--primary-dark); font-weight: 700; font-size: 13px; }
+
+/* ---- Pagination ---- */
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 24px 0 40px;
+  flex-wrap: wrap;
+}
+.pagination a, .pagination span {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  transition: background .2s, color .2s, transform .2s;
+}
+.pagination a:hover { background: rgba(31,164,99,.1); transform: translateY(-2px); }
+.pagination .current {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  border-color: transparent;
+}
+.pagination .disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+/* ---- Empty state ---- */
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  background: var(--surface-strong);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--muted);
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: .5; }
+.empty-state h3 { margin: 0 0 8px; color: var(--text); font-family: 'Outfit', sans-serif; }
+
+/* ---- Loading state ---- */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 30px;
+  color: var(--muted);
+}
+.spinner {
+  width: 24px; height: 24px;
+  border: 3px solid rgba(31,164,99,.2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- Footer ---- */
+.site-footer {
+  text-align: center;
+  padding: 30px 24px;
+  color: var(--muted);
+  font-size: 13px;
+  background: rgba(255,255,255,.5);
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+}
+.site-footer strong { color: var(--primary-dark); }
+
+/* ---- Form errors (front side, juste au cas où) ---- */
+.field-error {
+  color: #b91c1c;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+.input-invalid { border-color: #ef4444 !important; }
+
+/* ============================================================
+   Bandeau de nouveautés (en haut, sous la navbar)
+   ============================================================ */
+.news-banner {
+  position: fixed;
+  top: 70px; /* sous la navbar */
+  left: 0; right: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border-bottom: 2px solid #f59e0b;
+  font-size: 14px;
+  font-weight: 600;
+  color: #78350f;
+  animation: slideInBanner .5s ease both;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, .15);
+}
+@keyframes slideInBanner {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+.news-banner.hidden {
+  animation: slideOutBanner .35s ease both;
+  pointer-events: none;
+}
+@keyframes slideOutBanner {
+  to { transform: translateY(-100%); opacity: 0; }
+}
+.news-banner .news-icon {
+  font-size: 18px;
+  animation: bounceNews 2s ease-in-out infinite;
+}
+@keyframes bounceNews {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-3px); }
+}
+.news-banner .news-text strong {
+  color: #92400e;
+}
+.news-banner .news-list {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.news-banner .news-list a {
+  color: #78350f;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  font-weight: 700;
+  margin: 0 2px;
+  transition: color .2s;
+}
+.news-banner .news-list a:hover {
+  color: var(--primary-dark);
+}
+.news-banner .news-close {
+  background: rgba(120, 53, 15, .15);
+  color: #78350f;
+  border: none;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  transition: background .2s, transform .2s;
+}
+.news-banner .news-close:hover {
+  background: rgba(120, 53, 15, .3);
+  transform: rotate(90deg);
+}
+@media (max-width: 700px) {
+  .news-banner { font-size: 12px; padding: 8px 14px; }
+  .news-banner .news-list { display: none; }
+}
+
+/* ============================================================
+   Planning de menus - vue publique (FRONTOFFICE)
+   ============================================================ */
+.planning-public-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 14px;
+  margin-bottom: 30px;
+}
+@media (max-width: 1100px) {
+  .planning-public-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .planning-public-grid { grid-template-columns: 1fr; }
+}
+
+.planning-public-day {
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px 12px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 180px;
+  transition: transform .25s, box-shadow .25s;
+}
+.planning-public-day:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+.planning-public-today {
+  border: 2px solid var(--primary);
+  background: linear-gradient(180deg, rgba(31,164,99,.05), #fff);
+}
+.planning-public-day-header {
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.planning-public-day-name {
+  display: block;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.planning-public-day-date {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.planning-public-today .planning-today-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.planning-public-meals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.planning-public-meal {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 8px;
+  padding: 6px;
+  background: #fbfffc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: background .2s, border-color .2s, transform .2s;
+}
+.planning-public-meal:hover {
+  background: rgba(31,164,99,.08);
+  border-color: rgba(31,164,99,.4);
+  transform: translateY(-1px);
+}
+.planning-public-meal-img {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  background-color: #e5f0e8;
+}
+.planning-public-meal-noimg {
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+.planning-public-meal-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.planning-public-meal-moment {
+  font-size: 9px;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: var(--primary-dark);
+  line-height: 1;
+}
+.planning-public-meal-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.planning-public-meal-meta {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ============================================================
+   Chatbot - Widget flottant frontoffice
+   ============================================================ */
+
+/* --- Bouton flottant --- */
+.chatbot-toggle {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9000;
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  font-size: 28px;
+  box-shadow: 0 14px 40px rgba(31,164,99,.45);
+  display: grid;
+  place-items: center;
+  transition: transform .35s cubic-bezier(.18,1.2,.4,1), box-shadow .25s;
+  position: fixed; /* re-affirmé pour priorité */
+}
+.chatbot-toggle:hover {
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: 0 18px 50px rgba(31,164,99,.6);
+}
+.chatbot-toggle:active {
+  transform: scale(.95);
+}
+.chatbot-toggle-icon-open,
+.chatbot-toggle-icon-close {
+  position: absolute;
+  transition: opacity .25s, transform .35s;
+  display: grid;
+  place-items: center;
+}
+.chatbot-toggle-icon-close {
+  opacity: 0;
+  transform: rotate(-180deg);
+}
+.chatbot-toggle.is-open .chatbot-toggle-icon-open  { opacity: 0; transform: rotate(180deg); }
+.chatbot-toggle.is-open .chatbot-toggle-icon-close { opacity: 1; transform: rotate(0); }
+
+/* Pulse autour du bouton (attention) */
+.chatbot-toggle-pulse {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: rgba(31,164,99,.4);
+  animation: chatbotPulse 2s ease-out infinite;
+  pointer-events: none;
+}
+.chatbot-toggle.is-open .chatbot-toggle-pulse { display: none; }
+@keyframes chatbotPulse {
+  0%   { transform: scale(1);   opacity: .7; }
+  100% { transform: scale(1.5); opacity: 0;   }
+}
+
+/* --- Panneau de chat --- */
+.chatbot-panel {
+  position: fixed;
+  bottom: 100px;
+  right: 24px;
+  z-index: 8999;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  height: 580px;
+  max-height: calc(100vh - 130px);
+  background: #fff;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  box-shadow: 0 30px 80px rgba(15,45,30,.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform-origin: bottom right;
+  transform: scale(.85) translateY(20px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .35s cubic-bezier(.18,1.2,.4,1), opacity .25s;
+}
+.chatbot-panel.is-open {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* --- Header --- */
+.chatbot-header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.chatbot-header-icon {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.chatbot-header-info {
+  flex: 1;
+  min-width: 0;
+}
+.chatbot-header-info h3 {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+}
+.chatbot-header-info p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,.85);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chatbot-status-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 0 0 rgba(74,222,128,.6);
+  animation: chatbotStatus 2s ease-in-out infinite;
+}
+@keyframes chatbotStatus {
+  0%,100% { box-shadow: 0 0 0 0    rgba(74,222,128,.6); }
+  50%     { box-shadow: 0 0 0 6px  rgba(74,222,128,0); }
+}
+.chatbot-header-btn {
+  background: rgba(255,255,255,.15);
+  color: #fff;
+  border: none;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background .2s, transform .2s;
+}
+.chatbot-header-btn:hover {
+  background: rgba(255,255,255,.3);
+  transform: rotate(90deg);
+}
+
+/* --- Zone messages --- */
+.chatbot-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: linear-gradient(180deg, #fbfffc, #f4faf6);
+  scroll-behavior: smooth;
+}
+.chatbot-messages::-webkit-scrollbar { width: 6px; }
+.chatbot-messages::-webkit-scrollbar-thumb {
+  background: rgba(31,164,99,.3);
+  border-radius: 3px;
+}
+
+.chatbot-msg {
+  display: flex;
+  gap: 8px;
+  animation: chatbotMsgIn .3s ease both;
+  max-width: 90%;
+}
+@keyframes chatbotMsgIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.chatbot-msg-user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+.chatbot-msg-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: rgba(31,164,99,.15);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.chatbot-msg-user .chatbot-msg-avatar {
+  background: rgba(139,92,246,.18);
+}
+.chatbot-msg-bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  word-wrap: break-word;
+}
+.chatbot-msg-user .chatbot-msg-bubble {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  border-color: transparent;
+  border-bottom-right-radius: 4px;
+}
+.chatbot-msg-bot .chatbot-msg-bubble {
+  border-bottom-left-radius: 4px;
+}
+.chatbot-msg-bubble strong { font-weight: 700; }
+.chatbot-msg-bubble em { font-style: italic; }
+.chatbot-msg-bubble code {
+  background: rgba(31,164,99,.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+/* Indicateur "écriture en cours" */
+.chatbot-msg-typing .chatbot-msg-bubble {
+  padding: 14px 18px;
+}
+.chatbot-typing-dots {
+  display: flex;
+  gap: 4px;
+}
+.chatbot-typing-dots span {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: chatbotTyping 1.4s ease-in-out infinite;
+}
+.chatbot-typing-dots span:nth-child(2) { animation-delay: .2s; }
+.chatbot-typing-dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes chatbotTyping {
+  0%,60%,100% { transform: translateY(0);   opacity: .4; }
+  30%         { transform: translateY(-4px); opacity: 1;  }
+}
+
+/* Erreur affichée comme message */
+.chatbot-msg-error .chatbot-msg-bubble {
+  background: rgba(239,68,68,.1);
+  border-color: rgba(239,68,68,.3);
+  color: #991b1b;
+}
+
+/* --- Suggestions cliquables --- */
+.chatbot-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  padding-left: 40px; /* aligné après l'avatar du bot */
+  animation: chatbotMsgIn .3s ease both .15s;
+}
+.chatbot-suggestion-btn {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+  transition: background .2s, border-color .2s, transform .2s;
+}
+.chatbot-suggestion-btn:hover {
+  background: rgba(31,164,99,.08);
+  border-color: rgba(31,164,99,.4);
+  transform: translateY(-2px);
+}
+
+/* --- Formulaire --- */
+.chatbot-form {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  background: #fff;
+  align-items: flex-end;
+}
+.chatbot-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  background: #fbfffc;
+  max-height: 100px;
+  transition: border-color .2s, box-shadow .2s;
+  line-height: 1.4;
+}
+.chatbot-input:focus {
+  outline: none;
+  border-color: rgba(31,164,99,.5);
+  box-shadow: 0 0 0 3px rgba(31,164,99,.12);
+}
+.chatbot-send {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  border: none;
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: grid;
+  place-items: center;
+  transition: transform .2s, box-shadow .2s;
+  flex-shrink: 0;
+}
+.chatbot-send:hover:not(:disabled) {
+  transform: scale(1.1) rotate(-15deg);
+  box-shadow: 0 6px 18px rgba(31,164,99,.4);
+}
+.chatbot-send:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.chatbot-send-icon {
+  display: inline-block;
+  transform: translateX(1px);
+}
+
+.chatbot-footer-note {
+  margin: 0;
+  padding: 6px 14px 10px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+  background: #fff;
+}
+
+/* --- Mobile --- */
+@media (max-width: 500px) {
+  .chatbot-panel {
+    width: calc(100vw - 16px);
+    right: 8px;
+    bottom: 90px;
+    height: calc(100vh - 110px);
+    max-height: 600px;
+  }
+  .chatbot-toggle {
+    width: 56px; height: 56px;
+    bottom: 16px; right: 16px;
+    font-size: 24px;
+  }
+}

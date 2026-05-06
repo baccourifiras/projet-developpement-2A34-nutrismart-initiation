@@ -1,0 +1,35 @@
+.hero--suivi {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 42%),
+        linear-gradient(135deg, #172f45 0%, #1f8f5f 58%, #d29b3e 128%);
+}
+
+.result-card {
+    display: grid;
+    gap: 14px;
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(20, 35, 29, 0.08);
+}
+
+.result-card__top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.result-card__meta {
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
+.delta-positive {
+    color: #8c302d;
+}
+
+.delta-negative {
+    color: var(--primary-dark);
+}

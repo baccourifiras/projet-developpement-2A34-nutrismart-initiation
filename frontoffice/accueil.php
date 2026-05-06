@@ -312,12 +312,17 @@
     </div>
     <div class="nav-links">
       <a href="accueil.php">Accueil</a>
+<<<<<<< HEAD
       <a href="index.php">Événements</a>
       <a href="tache-categories.php">Tâche 1</a>
       <a href="tache-evenements.php">Tâche 2</a>
       <a href="tache-participants.php">Tâche 3</a>
       <a href="tache-design.php">Tâche 4</a>
       <a href="tache-javascript.php">Tâche 5</a>
+=======
+      <a href="recettes.php">Recettes</a>
+      <a href="ingredients.php">Ingrédients</a>
+>>>>>>> gestion-regime
       <a href="../backoffice/index.php" class="nav-dashboard">Dashboard</a>
     </div>
   </nav>
@@ -372,6 +377,7 @@
 
   <!-- ── ACCÈS AUX PAGES ── -->
   <section class="accueil-info" id="pages">
+<<<<<<< HEAD
     <h2 class="accueil-info-title">Accéder aux autres pages</h2>
 
     <div class="info-cards-grid">
@@ -409,6 +415,33 @@
         <span class="feature-icon">⚡</span>
         <h3><a href="tache-javascript.php">Tâche 5 - Espace communauté</a></h3>
         <p>Accédez à la page réservée aux interactions et au comportement JavaScript.</p>
+=======
+    <h2 class="accueil-info-title">Explorez NutriSmart</h2>
+
+    <div class="info-cards-grid">
+      <div class="info-feature-card">
+        <span class="feature-icon">🍽️</span>
+        <h3><a href="recettes.php">Nos recettes</a></h3>
+        <p>Parcourez la bibliothèque complète de recettes saines, filtrez par durée, niveau ou ingrédient.</p>
+      </div>
+
+      <div class="info-feature-card">
+        <span class="feature-icon">🥕</span>
+        <h3><a href="ingredients.php">Nos ingrédients</a></h3>
+        <p>Découvrez tous les ingrédients utilisés, leurs catégories et les recettes dans lesquelles on les retrouve.</p>
+      </div>
+
+      <div class="info-feature-card">
+        <span class="feature-icon">📅</span>
+        <h3><a href="planning.php">Menu de la semaine</a></h3>
+        <p>Découvrez ce que nous cuisinons cette semaine, jour par jour, avec les recettes prévues pour chaque repas.</p>
+      </div>
+
+      <div class="info-feature-card">
+        <span class="feature-icon">📊</span>
+        <h3><a href="../backoffice/index.php">Tableau de bord</a></h3>
+        <p>Espace d'administration pour gérer les recettes, les ingrédients et exporter vos données (CSV, Excel, PDF).</p>
+>>>>>>> gestion-regime
       </div>
     </div>
   </section>
