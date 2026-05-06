@@ -177,16 +177,13 @@ class NutrismartController
 
     private function ensureSchema()
     {
-        if (!$this->columnExists('evenement', 'heure_evenement')) {
-            $this->pdo->exec("ALTER TABLE evenement ADD heure_evenement TIME NULL AFTER date_evenement");
-        }
-        if (!$this->columnExists('evenement', 'places')) {
-            $this->pdo->exec("ALTER TABLE evenement ADD places INT NOT NULL DEFAULT 0 AFTER id_categorie");
-        }
-        if (!$this->columnExists('participant', 'date_inscription')) {
-            $this->pdo->exec("ALTER TABLE participant ADD date_inscription DATE NULL AFTER id_evenement");
-        }
-        if ($this->columnType('evenement', 'image') !== 'text') {
+        // Les migrations de colonnes sont maintenant gérées dans Config::applySchema()
+        // appelé automatiquement à chaque connexion BDD.
+        // Cette méthode reste pour la compatibilité et les vérifications spécifiques.
+
+        // S'assurer que la colonne image est de type TEXT (cas ancienne BDD)
+        $type = $this->columnType('evenement', 'image');
+        if ($type && strtolower($type) !== 'text') {
             $this->pdo->exec("ALTER TABLE evenement MODIFY image TEXT NULL");
         }
     }

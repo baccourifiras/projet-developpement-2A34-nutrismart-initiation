@@ -78,6 +78,8 @@ try {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NutriSmart - Dashboard</title>
   <link rel="stylesheet" href="style.css?v=20260429-anim" />
+  <!-- Leaflet CSS — carte interactive gratuite, sans clé API -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
   <aside class="sidebar">
@@ -240,11 +242,71 @@ try {
         </div>
         <div class="full-width">
           <label for="eventDescription">Description</label>
-          <textarea id="eventDescription" name="description" required minlength="10" maxlength="1000" rows="4" placeholder="Description de l'événement" title="La description doit contenir entre 10 et 1000 caracteres."></textarea>
+          <div class="description-wrapper">
+            <textarea id="eventDescription" name="description" required minlength="10" maxlength="1000" rows="4" placeholder="Description de l'événement" title="La description doit contenir entre 10 et 1000 caracteres."></textarea>
+            <button type="button" class="ia-btn" id="genererIaBtn" title="Générer une description avec l'IA">
+              <span class="ia-btn-icon">✦</span>
+              <span class="ia-btn-text">Générer avec IA</span>
+            </button>
+          </div>
         </div>
         <div class="full-width">
-          <label for="eventImage">Image URL</label>
-          <input id="eventImage" name="image" type="url" placeholder="https://..." pattern="https?://.+" title="L URL doit commencer par http:// ou https://." />
+          <label>Image de l'événement</label>
+          <div class="upload-wrapper" id="uploadWrapper">
+            <!-- Zone de drop / bouton upload -->
+            <div class="upload-zone" id="uploadZone">
+              <div class="upload-zone-inner">
+                <div class="upload-icon-wrap">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                </div>
+                <p class="upload-label">Glissez une photo ici</p>
+                <p class="upload-sub">ou</p>
+                <button type="button" class="upload-btn" id="uploadBtn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Choisir une photo
+                </button>
+                <p class="upload-hint">JPG, PNG, WEBP — max 5 Mo</p>
+              </div>
+            </div>
+            <!-- Prévisualisation -->
+            <div class="upload-preview hidden" id="uploadPreview">
+              <img id="uploadPreviewImg" src="" alt="Aperçu" />
+              <div class="upload-preview-overlay">
+                <button type="button" class="upload-change-btn" id="uploadChangeBtn">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Changer
+                </button>
+                <button type="button" class="upload-remove-btn" id="uploadRemoveBtn">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                  Supprimer
+                </button>
+              </div>
+              <div class="upload-progress hidden" id="uploadProgress">
+                <div class="upload-progress-bar" id="uploadProgressBar"></div>
+              </div>
+            </div>
+            <!-- Input file caché -->
+            <input type="file" id="uploadFileInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" />
+            <!-- Champ URL final envoyé au serveur -->
+            <input type="hidden" id="eventImage" name="image" />
+            <!-- Fallback URL manuelle -->
+            <div class="upload-url-fallback">
+              <span>ou coller une URL :</span>
+              <input type="url" id="eventImageUrl" placeholder="https://..." style="flex:1" />
+            </div>
+          </div>
+        </div>
+        <!-- Sélecteur de localisation sur carte -->
+        <div class="full-width">
+          <label>📍 Localisation sur la carte <span class="map-hint">(cliquez sur la carte pour placer l'événement)</span></label>
+          <div id="mapPicker" class="map-picker"></div>
+          <div class="map-coords-row">
+            <span id="mapCoordsText" class="map-coords-text">Aucune position sélectionnée</span>
+            <button type="button" class="map-clear-btn" id="mapClearBtn">✕ Effacer</button>
+          </div>
+          <input type="hidden" id="eventLatitude"  name="latitude" />
+          <input type="hidden" id="eventLongitude" name="longitude" />
+          <input type="hidden" id="eventGoogleMaps" name="googleMapsLink" />
         </div>
         <button class="primary-btn" type="submit">Ajouter l'événement</button>
       </form>
@@ -295,7 +357,8 @@ try {
                   <td><?= htmlspecialchars((string) $eventController->formatDateFr($event['date']), ENT_QUOTES, 'UTF-8') ?></td>
                   <td><?= htmlspecialchars((string) $event['location'], ENT_QUOTES, 'UTF-8') ?></td>
                   <td class="action-cell">
-	                    <button class="edit-btn" data-id="<?= htmlspecialchars((string) $event['id'], ENT_QUOTES, 'UTF-8') ?>" data-title="<?= htmlspecialchars((string) $event['title'], ENT_QUOTES, 'UTF-8') ?>" data-category-id="<?= htmlspecialchars((string) $event['categoryId'], ENT_QUOTES, 'UTF-8') ?>" data-date="<?= htmlspecialchars((string) $event['date'], ENT_QUOTES, 'UTF-8') ?>" data-time="<?= htmlspecialchars((string) $event['time'], ENT_QUOTES, 'UTF-8') ?>" data-location="<?= htmlspecialchars((string) $event['location'], ENT_QUOTES, 'UTF-8') ?>" data-seats="<?= htmlspecialchars((string) $event['seats'], ENT_QUOTES, 'UTF-8') ?>" data-description="<?= htmlspecialchars((string) $event['description'], ENT_QUOTES, 'UTF-8') ?>" data-image="<?= htmlspecialchars((string) $event['image'], ENT_QUOTES, 'UTF-8') ?>" onclick="afficherModalModifEvenement(this)">Modifier</button>
+	                    <button class="edit-btn" data-id="<?= htmlspecialchars((string) $event['id'], ENT_QUOTES, 'UTF-8') ?>" data-title="<?= htmlspecialchars((string) $event['title'], ENT_QUOTES, 'UTF-8') ?>" data-category-id="<?= htmlspecialchars((string) $event['categoryId'], ENT_QUOTES, 'UTF-8') ?>" data-date="<?= htmlspecialchars((string) $event['date'], ENT_QUOTES, 'UTF-8') ?>" data-time="<?= htmlspecialchars((string) $event['time'], ENT_QUOTES, 'UTF-8') ?>" data-location="<?= htmlspecialchars((string) $event['location'], ENT_QUOTES, 'UTF-8') ?>" data-seats="<?= htmlspecialchars((string) $event['seats'], ENT_QUOTES, 'UTF-8') ?>" data-description="<?= htmlspecialchars((string) $event['description'], ENT_QUOTES, 'UTF-8') ?>" data-image="<?= htmlspecialchars((string) $event['image'], ENT_QUOTES, 'UTF-8') ?>" data-google-maps-link="<?= htmlspecialchars((string) ($event['googleMapsLink'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" data-latitude="<?= htmlspecialchars((string) ($event['latitude'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" data-longitude="<?= htmlspecialchars((string) ($event['longitude'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" onclick="afficherModalModifEvenement(this)">Modifier</button>
+                    <button class="mail-btn" onclick="envoyerRappel(<?= (int)$event['id'] ?>, '<?= htmlspecialchars((string) addslashes($event['title']), ENT_QUOTES, 'UTF-8') ?>')" title="Envoyer un rappel par email aux participants">📧 Rappel</button>
                     <button class="delete-btn" onclick="afficherConfirmSuppression('Supprimer <strong><?= htmlspecialchars((string) addslashes($event['title']), ENT_QUOTES, 'UTF-8') ?></strong> ? Ses participants seront aussi supprimes.', function(){ supprimerEvenement(<?= htmlspecialchars((string) $event['id'], ENT_QUOTES, 'UTF-8') ?>); })">Supprimer</button>
                   </td>
                 </tr>
@@ -385,6 +448,8 @@ try {
 	    <?php endforeach; ?>
 	  </select>
 
-	  <script src="script.js?v=20260429-tri-search"></script>
+	  <!-- Leaflet JS — carte interactive -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js?v=20260430-maps"></script>
 </body>
 </html>

@@ -524,8 +524,10 @@ textarea { min-height: 120px; resize: vertical; }
   backdrop-filter: blur(4px);
   z-index: 9999;
   display: flex;
-  align-items: center;
+  align-items: flex-start;        /* ne pas centrer verticalement — permet le scroll */
   justify-content: center;
+  overflow-y: auto;               /* scroll sur l'overlay lui-même */
+  padding: 24px 16px;             /* espace en haut et en bas */
   animation: overlayFadeIn 0.2s ease both;
 }
 
@@ -543,12 +545,17 @@ textarea { min-height: 120px; resize: vertical; }
   text-align: center;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25);
   animation: boxPop 0.3s cubic-bezier(0.23, 1, 0.32, 1) both;
+  /* centrage vertical quand le contenu est court */
+  margin: auto;
 }
 
-/* La boîte de modification est plus large */
+/* La boîte de modification est plus large et scrollable */
 .edit-box {
-  max-width: 680px;
+  max-width: 720px;
+  width: 94%;
   text-align: left;
+  margin: 0 auto;                 /* centré horizontalement */
+  max-height: none;               /* pas de limite — l'overlay scrolle */
 }
 
 @keyframes boxPop {
@@ -565,7 +572,21 @@ textarea { min-height: 120px; resize: vertical; }
   font-size: 1.2rem;
   font-weight: 800;
   color: #111827;
-  margin: 0 0 12px;
+  margin: 0 0 20px;
+}
+
+/* Titre sticky en haut de la modal de modification */
+.edit-box > h3 {
+  position: sticky;
+  top: -36px;           /* compense le padding du confirm-box */
+  background: #ffffff;
+  padding: 20px 0 14px;
+  margin: -36px -36px 20px;
+  padding-left: 36px;
+  padding-right: 36px;
+  border-bottom: 1px solid rgba(23,153,95,.1);
+  z-index: 2;
+  border-radius: 20px 20px 0 0;
 }
 
 .confirm-box p {
@@ -583,6 +604,14 @@ textarea { min-height: 120px; resize: vertical; }
 
 .edit-box .confirm-actions {
   justify-content: flex-end;
+  /* Coller les boutons en bas, toujours visibles */
+  position: sticky;
+  bottom: 0;
+  background: #ffffff;
+  padding: 16px 0 4px;
+  margin-top: 20px;
+  border-top: 1px solid rgba(23,153,95,.1);
+  z-index: 1;
 }
 
 .cancel-btn {
@@ -685,4 +714,414 @@ textarea { min-height: 120px; resize: vertical; }
 
 @media print {
   .table-controls { display: none !important; }
+}
+
+/* ============================================================
+   BOUTON IA — Générateur de description (design amélioré)
+   ============================================================ */
+
+.description-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Bouton "Générer avec IA" — design premium */
+.ia-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9, #4c1d95);
+  background-size: 200% 200%;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  box-shadow:
+    0 4px 15px rgba(109, 40, 217, 0.4),
+    inset 0 1px 0 rgba(255,255,255,0.15);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background-position 0.4s ease;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Reflet lumineux animé */
+.ia-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+}
+
+.ia-btn:hover::before {
+  left: 130%;
+}
+
+.ia-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow:
+    0 8px 25px rgba(109, 40, 217, 0.55),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+  background-position: right center;
+}
+
+.ia-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Icône étoile animée */
+.ia-btn-icon {
+  font-size: 15px;
+  display: inline-block;
+  animation: starSpin 3s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.6));
+}
+
+@keyframes starSpin {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.2); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.ia-btn-text {
+  position: relative;
+}
+
+/* État chargement */
+.ia-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+}
+
+.ia-btn:disabled .ia-btn-icon {
+  animation: starSpin 0.6s linear infinite;
+}
+
+/* ============================================================
+   BOUTON MAPS — Lien Google Maps dans le FrontOffice
+   ============================================================ */
+.maps-btn {
+  font-size: 13px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+}
+
+/* ============================================================
+   CARTE LEAFLET — sélecteur de localisation (BackOffice)
+   ============================================================ */
+
+.map-picker {
+  width: 100%;
+  height: 320px;
+  border-radius: 16px;
+  border: 1px solid rgba(23,153,95,.2);
+  overflow: hidden;
+  cursor: crosshair;
+  box-shadow: 0 4px 18px rgba(12,29,21,.08);
+  margin-top: 6px;
+}
+
+.map-hint {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 6px;
+}
+
+.map-coords-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.map-coords-text {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.map-coords-text.active {
+  color: var(--primary-dark);
+}
+
+.map-clear-btn {
+  padding: 5px 12px;
+  border: 1px solid rgba(220,38,38,.3);
+  border-radius: 8px;
+  background: rgba(220,38,38,.06);
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+
+.map-clear-btn:hover {
+  background: rgba(220,38,38,.14);
+}
+
+/* Carte dans la modal de modification */
+.map-picker-modal {
+  width: 100%;
+  height: 260px;
+  border-radius: 14px;
+  border: 1px solid rgba(23,153,95,.2);
+  overflow: hidden;
+  cursor: crosshair;
+  margin-top: 6px;
+}
+
+/* ============================================================
+   UPLOAD D'IMAGE — composant moderne avec drag & drop
+   ============================================================ */
+
+.upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Zone de drop */
+.upload-zone {
+  border: 2px dashed rgba(23,153,95,.3);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(23,153,95,.04), rgba(255,255,255,.9));
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .25s ease, background .25s ease, transform .2s ease;
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: rgba(23,153,95,.65);
+  background: linear-gradient(135deg, rgba(23,153,95,.09), rgba(255,255,255,1));
+  transform: translateY(-2px);
+}
+
+.upload-zone.drag-over {
+  border-style: solid;
+  box-shadow: 0 0 0 4px rgba(23,153,95,.12);
+}
+
+.upload-zone-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.upload-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(23,153,95,.14), rgba(255,255,255,.9));
+  display: grid;
+  place-items: center;
+  color: var(--primary-dark);
+  margin-bottom: 4px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 4px 12px rgba(23,153,95,.12);
+}
+
+.upload-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.upload-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.upload-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 4px 0 0;
+}
+
+/* Bouton "Choisir une photo" */
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(23,153,95,.3);
+  transition: transform .2s ease, box-shadow .2s ease;
+  margin: 4px 0;
+}
+
+.upload-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 10px 24px rgba(23,153,95,.42);
+}
+
+/* Zone de prévisualisation */
+.upload-preview {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(23,153,95,.2);
+  box-shadow: 0 6px 20px rgba(12,29,21,.1);
+}
+
+.upload-preview img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+/* Overlay avec boutons Changer / Supprimer */
+.upload-preview-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10,25,18,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+
+.upload-preview:hover .upload-preview-overlay {
+  opacity: 1;
+}
+
+.upload-change-btn,
+.upload-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.upload-change-btn {
+  background: #ffffff;
+  color: var(--primary-dark);
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+
+.upload-remove-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(220,38,38,.35);
+}
+
+.upload-change-btn:hover,
+.upload-remove-btn:hover {
+  transform: translateY(-2px) scale(1.04);
+}
+
+/* Barre de progression */
+.upload-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255,255,255,.3);
+}
+
+.upload-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #34d399, #10b981);
+  border-radius: 999px;
+  transition: width .15s ease;
+  width: 0%;
+}
+
+/* Fallback URL */
+.upload-url-fallback {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.upload-url-fallback span {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.upload-url-fallback input {
+  font-size: 13px;
+  padding: 10px 12px;
+}
+
+.hidden { display: none !important; }
+
+/* Source indicator after IA generation */
+.ia-source-hint {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+  animation: fadeInHint 0.4s ease both;
+}
+
+@keyframes fadeInHint {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 0.8; transform: translateY(0); }
+}
+
+/* ============================================================
+   MODAL SUPPRESSION — rester centrée verticalement (contenu court)
+   ============================================================ */
+#deleteModal .confirm-overlay {
+  align-items: center;
+  padding: 0;
+}
+
+/* ── Bouton Rappel email ── */
+.mail-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #0891b2, #0e7490);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(8, 145, 178, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mail-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(8, 145, 178, 0.45);
 }
