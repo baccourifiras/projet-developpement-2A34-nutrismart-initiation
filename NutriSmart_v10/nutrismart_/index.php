@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/Controller/PageController.php';
@@ -10,7 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? $_POST['action'] : '';
 
     if ($action === 'ajouter' || $action === 'modifier' || $action === 'supprimer'
-        || $action === 'login' || $action === 'deconnexion') {
+        || $action === 'login' || $action === 'deconnexion'
+        || $action === 'face_register' || $action === 'face_login') {
         $ctrl = new UtilisateurController();
         $ctrl->handle();
         exit;

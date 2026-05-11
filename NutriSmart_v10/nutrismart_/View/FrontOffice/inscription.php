@@ -203,6 +203,75 @@
       .auth-hero { display: none; }
       .auth-panel { padding: 36px 20px; }
     }
+
+    /* ── FACE ID ── */
+    .face-box {
+      background: #fff; border: 1.5px solid #ddeee5; border-radius: 20px;
+      padding: 24px; display: flex; flex-direction: column; gap: 16px;
+    }
+    .face-header { display: flex; align-items: center; gap: 14px; }
+    .face-icon-big { font-size: 36px; }
+    .face-title { font-size: 16px; font-weight: 800; color: #10281b; }
+    .face-hint  { font-size: 12px; color: #638070; margin-top: 2px; }
+
+    .video-container {
+      position: relative; width: 100%; max-width: 380px;
+      margin: 0 auto; border-radius: 16px; overflow: hidden;
+      background: #0a1a10; aspect-ratio: 4/3;
+    }
+    .video-container video,
+    .video-container canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .video-container canvas { z-index: 2; }
+    .face-overlay {
+      position: absolute; inset: 0; z-index: 3;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 12px;
+      pointer-events: none;
+    }
+    .face-ring {
+      width: 160px; height: 160px; border-radius: 50%;
+      border: 3px solid rgba(31,164,99,.7);
+      box-shadow: 0 0 0 4px rgba(31,164,99,.15);
+      transition: border-color .3s, box-shadow .3s;
+    }
+    .face-ring.detected {
+      border-color: #1fa463;
+      box-shadow: 0 0 0 6px rgba(31,164,99,.3), 0 0 20px rgba(31,164,99,.4);
+    }
+    .face-ring.error { border-color: #ef4444; box-shadow: 0 0 0 6px rgba(239,68,68,.2); }
+    .face-status {
+      background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+      color: #fff; font-size: 12px; font-weight: 600;
+      padding: 6px 14px; border-radius: 999px;
+    }
+
+    .face-msg {
+      font-size: 13px; font-weight: 600; text-align: center;
+      min-height: 20px; padding: 4px 0;
+    }
+    .face-msg.ok   { color: #16a34a; }
+    .face-msg.err  { color: #dc2626; }
+    .face-msg.info { color: #0369a1; }
+
+    .face-actions { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+    .btn-face {
+      background: linear-gradient(135deg, #1fa463, #0f6c42);
+      color: #fff; border: none; border-radius: 14px;
+      padding: 13px 28px; font-size: 14px; font-weight: 800;
+      font-family: inherit; cursor: pointer; width: 100%;
+      box-shadow: 0 8px 20px rgba(31,164,99,.25);
+      transition: transform .2s, box-shadow .2s, opacity .2s;
+    }
+    .btn-face:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(31,164,99,.32); }
+    .btn-face:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-skip {
+      font-size: 12px; font-weight: 600; color: #638070;
+      text-decoration: none; transition: color .2s;
+    }
+    .btn-skip:hover { color: #1fa463; }
   </style>
   <script src="public/js/lang.js"></script>
 </head>
@@ -259,7 +328,34 @@
     <h1 class="auth-title" data-i18n="signup_title">Créer un compte ✨</h1>
     <p class="auth-sub" data-i18n="signup_sub">Rejoignez NutriSmart et prenez soin de votre santé.</p>
 
-    <?php if (isset($_GET['succes'])): ?>
+    <?php if (isset($_GET['succes']) && isset($_GET['user_id'])): ?>
+      <!-- Étape Face ID après inscription réussie -->
+      <div id="faceIdSetup">
+        <div class="alert alert-ok" style="margin-bottom:16px;">✅ Compte créé ! Enregistrez maintenant votre visage pour activer la connexion Face ID.</div>
+        <div class="face-box">
+          <div class="face-header">
+            <span class="face-icon-big">🪪</span>
+            <div>
+              <div class="face-title">Enregistrement Face ID</div>
+              <div class="face-hint">Placez votre visage dans le cadre et cliquez sur "Scanner"</div>
+            </div>
+          </div>
+          <div class="video-container">
+            <video id="faceVideo" autoplay muted playsinline></video>
+            <canvas id="faceCanvas"></canvas>
+            <div id="faceOverlay" class="face-overlay">
+              <div class="face-ring" id="faceRing"></div>
+              <div class="face-status" id="faceStatus">Initialisation de la caméra…</div>
+            </div>
+          </div>
+          <div id="faceMsg" class="face-msg"></div>
+          <div class="face-actions">
+            <button type="button" id="btnScanFace" class="btn-face" disabled>📸 Scanner mon visage</button>
+            <a href="index.php?page=login" class="btn-skip">Passer cette étape →</a>
+          </div>
+        </div>
+      </div>
+    <?php elseif (isset($_GET['succes'])): ?>
       <div class="alert alert-ok"><span data-i18n="alert_success">✅ Compte créé avec succès !</span> <a href="index.php?page=login" style="color:#166534;font-weight:800;" data-i18n="alert_login_link">Se connecter</a></div>
     <?php endif; ?>
     <?php if (isset($_GET['erreur'])): ?>
@@ -450,5 +546,138 @@
     if (!okNom || !okPrenom || !okEmail || !okMdp || !okRole) e.preventDefault();
   });
 </script>
+
+<?php if (isset($_GET['succes']) && isset($_GET['user_id'])): ?>
+<!-- face-api.js local -->
+<script src="<?= rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') ?>/public/js/face-api.min.js"></script>
+<script>
+(function() {
+  const USER_ID   = <?= (int) $_GET['user_id'] ?>;
+  const MODEL_URL = '<?= rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') ?>/public/models';
+
+  const video    = document.getElementById('faceVideo');
+  const canvas   = document.getElementById('faceCanvas');
+  const ring     = document.getElementById('faceRing');
+  const statusEl = document.getElementById('faceStatus');
+  const msgEl    = document.getElementById('faceMsg');
+  const btnScan  = document.getElementById('btnScanFace');
+
+  let modelsLoaded = false;
+  let stream       = null;
+  let detectLoop   = null;
+  let lastDescriptor = null;
+
+  function setMsg(text, cls) {
+    msgEl.textContent = text;
+    msgEl.className   = 'face-msg ' + (cls || '');
+  }
+
+  async function init() {
+    statusEl.textContent = 'Chargement des modèles IA…';
+    try {
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+      ]);
+      modelsLoaded = true;
+      statusEl.textContent = 'Démarrage de la caméra…';
+      await startCamera();
+    } catch (err) {
+      statusEl.textContent = 'Erreur de chargement';
+      setMsg('❌ Impossible de charger les modèles : ' + err.message, 'err');
+    }
+  }
+
+  async function startCamera() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+      video.srcObject = stream;
+      video.onloadedmetadata = () => {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        statusEl.textContent = 'Placez votre visage dans le cadre';
+        btnScan.disabled = false;
+        startDetectLoop();
+      };
+    } catch (err) {
+      statusEl.textContent = 'Caméra inaccessible';
+      setMsg('❌ Accès à la caméra refusé. Autorisez la caméra dans votre navigateur.', 'err');
+    }
+  }
+
+  function startDetectLoop() {
+    const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
+    detectLoop = setInterval(async () => {
+      if (!modelsLoaded || video.paused || video.ended) return;
+      const result = await faceapi
+        .detectSingleFace(video, opts)
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (result) {
+        faceapi.draw.drawDetections(canvas, [result]);
+        ring.classList.add('detected');
+        ring.classList.remove('error');
+        statusEl.textContent = '✅ Visage détecté';
+        lastDescriptor = result.descriptor;
+      } else {
+        ring.classList.remove('detected', 'error');
+        statusEl.textContent = 'Placez votre visage dans le cadre';
+        lastDescriptor = null;
+      }
+    }, 300);
+  }
+
+  btnScan.addEventListener('click', async () => {
+    if (!lastDescriptor) {
+      setMsg('⚠️ Aucun visage détecté. Positionnez-vous face à la caméra.', 'err');
+      ring.classList.add('error');
+      return;
+    }
+
+    btnScan.disabled = true;
+    btnScan.textContent = '⏳ Enregistrement…';
+    setMsg('', '');
+
+    const descriptorArray = Array.from(lastDescriptor);
+
+    try {
+      const fd = new FormData();
+      fd.append('action',     'face_register');
+      fd.append('id_user',    USER_ID);
+      fd.append('descriptor', JSON.stringify(descriptorArray));
+
+      const resp = await fetch('index.php', { method: 'POST', body: fd });
+      const data = await resp.json();
+
+      if (data.success) {
+        clearInterval(detectLoop);
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        ring.classList.add('detected');
+        statusEl.textContent = '✅ Face ID enregistré !';
+        setMsg('🎉 Votre Face ID a été enregistré avec succès !', 'ok');
+        btnScan.textContent = '✅ Enregistré';
+        setTimeout(() => { window.location.href = 'index.php?page=login'; }, 2000);
+      } else {
+        setMsg('❌ ' + (data.message || 'Erreur lors de l\'enregistrement.'), 'err');
+        btnScan.disabled = false;
+        btnScan.textContent = '📸 Réessayer';
+      }
+    } catch (err) {
+      setMsg('❌ Erreur réseau : ' + err.message, 'err');
+      btnScan.disabled = false;
+      btnScan.textContent = '📸 Réessayer';
+    }
+  });
+
+  // Démarrer automatiquement
+  init();
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>

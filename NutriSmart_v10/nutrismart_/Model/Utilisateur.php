@@ -224,5 +224,47 @@ class Utilisateur
         $query->execute([':email' => $email, ':id' => $excludeId]);
         return $query->fetchColumn() > 0;
     }
+
+    /**
+     * Sauvegarde le descripteur facial (tableau JSON) pour un utilisateur.
+     */
+    public function saveFaceDescriptor($id_user, $descriptor_json)
+    {
+        $db    = config::getConnexion();
+        $query = $db->prepare(
+            "UPDATE utilisateur SET face_descriptor = :fd WHERE id_user = :id"
+        );
+        return $query->execute([':fd' => $descriptor_json, ':id' => $id_user]);
+    }
+
+    /**
+     * Retourne tous les utilisateurs ayant un descripteur facial enregistré.
+     */
+    public function getAllWithFaceDescriptor()
+    {
+        $db    = config::getConnexion();
+        $query = $db->prepare(
+            "SELECT id_user, nom, prenom, email, role, face_descriptor
+             FROM utilisateur
+             WHERE face_descriptor IS NOT NULL"
+        );
+        $query->execute();
+        return $query->fetchAll();
+    }
+
+    /**
+     * Retourne le descripteur facial d'un utilisateur par son email.
+     */
+    public function getFaceDescriptorByEmail($email)
+    {
+        $db    = config::getConnexion();
+        $query = $db->prepare(
+            "SELECT id_user, nom, prenom, email, role, face_descriptor
+             FROM utilisateur
+             WHERE email = :email LIMIT 1"
+        );
+        $query->execute([':email' => $email]);
+        return $query->fetch();
+    }
 }
 ?>

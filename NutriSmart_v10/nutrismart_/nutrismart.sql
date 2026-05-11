@@ -30,6 +30,7 @@ CREATE TABLE `utilisateur` (
   `mot_de_passe`     VARCHAR(255) NOT NULL COMMENT 'Mot de passe en clair',
   `role`             ENUM('admin','nutritionniste','client') NOT NULL DEFAULT 'client',
   `provider_login`   ENUM('google','facebook','local')      NOT NULL DEFAULT 'local',
+  `face_descriptor`  TEXT         DEFAULT NULL COMMENT 'Descripteur facial JSON (128 valeurs float, face-api.js)',
   `date_inscription` DATETIME     DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_user`),
   UNIQUE KEY `email` (`email`)

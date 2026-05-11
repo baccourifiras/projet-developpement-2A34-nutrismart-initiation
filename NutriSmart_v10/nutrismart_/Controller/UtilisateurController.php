@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../Model/Utilisateur.php';
 require_once __DIR__ . '/../Model/Historique.php';
+require_once __DIR__ . '/../config.php';
 
 class UtilisateurController
 {
@@ -21,11 +22,13 @@ class UtilisateurController
     {
         $action = isset($_POST['action']) ? $_POST['action'] : '';
 
-        if      ($action === 'ajouter')     { $this->ajouter();     }
-        elseif  ($action === 'modifier')    { $this->modifier();    }
-        elseif  ($action === 'supprimer')   { $this->supprimer();   }
-        elseif  ($action === 'login')       { $this->login();       }
-        elseif  ($action === 'deconnexion') { $this->deconnexion(); }
+        if      ($action === 'ajouter')        { $this->ajouter();        }
+        elseif  ($action === 'modifier')       { $this->modifier();       }
+        elseif  ($action === 'supprimer')      { $this->supprimer();      }
+        elseif  ($action === 'login')          { $this->login();          }
+        elseif  ($action === 'deconnexion')    { $this->deconnexion();    }
+        elseif  ($action === 'face_register')  { $this->faceRegister();   }
+        elseif  ($action === 'face_login')     { $this->faceLogin();      }
     }
 
     private function ajouter()
@@ -96,10 +99,14 @@ class UtilisateurController
 
         $this->model->create($data);
 
+        // Récupérer l'ID du nouvel utilisateur pour l'étape Face ID
+        $db    = config::getConnexion();
+        $newId = (int) $db->lastInsertId();
+
         if ($viaAdmin) {
             header('Location: index.php?page=dashboard&onglet=utilisateurs&succes=ajoute');
         } else {
-            header('Location: index.php?page=inscription&succes=1');
+            header('Location: index.php?page=inscription&succes=1&user_id=' . $newId);
         }
         exit;
     }
@@ -208,6 +215,127 @@ class UtilisateurController
         }
         session_destroy();
         header('Location: index.php?page=login');
+        exit;
+    }
+
+    /**
+     * Enregistre le descripteur facial d'un utilisateur après inscription.
+     * Appelé en AJAX (JSON).
+     */
+    private function faceRegister()
+    {
+        // Supprimer tout output parasite (notices, warnings PHP) avant le JSON
+        ob_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $id_user    = isset($_POST['id_user'])    ? (int) $_POST['id_user']    : 0;
+        $descriptor = isset($_POST['descriptor']) ? $_POST['descriptor']       : '';
+
+        if ($id_user <= 0 || empty($descriptor)) {
+            echo json_encode(['success' => false, 'message' => 'Données manquantes.']);
+            exit;
+        }
+
+        // Valider que c'est bien un JSON de tableau de nombres
+        $arr = json_decode($descriptor, true);
+        if (!is_array($arr) || count($arr) < 10) {
+            echo json_encode(['success' => false, 'message' => 'Descripteur invalide.']);
+            exit;
+        }
+
+        try {
+            $ok = $this->model->saveFaceDescriptor($id_user, $descriptor);
+            echo json_encode(['success' => (bool) $ok]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Erreur BD : ' . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    /**
+     * Authentification par reconnaissance faciale.
+     * Reçoit un descripteur en POST, compare avec tous les utilisateurs enregistrés.
+     * Appelé en AJAX (JSON).
+     */
+    private function faceLogin()
+    {
+        // Supprimer tout output parasite (notices, warnings PHP) avant le JSON
+        ob_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $descriptor = isset($_POST['descriptor']) ? $_POST['descriptor'] : '';
+
+        if (empty($descriptor)) {
+            echo json_encode(['success' => false, 'message' => 'Descripteur manquant.']);
+            exit;
+        }
+
+        $incoming = json_decode($descriptor, true);
+        if (!is_array($incoming) || count($incoming) < 10) {
+            echo json_encode(['success' => false, 'message' => 'Descripteur invalide.']);
+            exit;
+        }
+
+        try {
+            $users = $this->model->getAllWithFaceDescriptor();
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Erreur BD : ' . $e->getMessage()]);
+            exit;
+        }
+
+        $bestMatch    = null;
+        $bestDistance = PHP_FLOAT_MAX;
+        $threshold    = 0.55;
+
+        foreach ($users as $u) {
+            $stored = json_decode($u['face_descriptor'], true);
+            if (!is_array($stored) || count($stored) !== count($incoming)) continue;
+
+            // Distance euclidienne
+            $sum = 0.0;
+            for ($i = 0; $i < count($incoming); $i++) {
+                $diff = (float)$incoming[$i] - (float)$stored[$i];
+                $sum += $diff * $diff;
+            }
+            $distance = sqrt($sum);
+
+            if ($distance < $bestDistance) {
+                $bestDistance = $distance;
+                $bestMatch    = $u;
+            }
+        }
+
+        if ($bestMatch && $bestDistance <= $threshold) {
+            // Connexion réussie
+            try {
+                $historique = new Historique();
+                $historique->enregistrer($bestMatch['id_user'], 'connexion_faceid', 'succes', $bestMatch['email']);
+            } catch (Exception $e) { /* non bloquant */ }
+
+            $_SESSION['user_id']     = $bestMatch['id_user'];
+            $_SESSION['user_nom']    = $bestMatch['nom'];
+            $_SESSION['user_prenom'] = $bestMatch['prenom'];
+            $_SESSION['user_email']  = $bestMatch['email'];
+            $_SESSION['user_role']   = $bestMatch['role'];
+
+            $redirect = 'index.php?page=accueil';
+            if      ($bestMatch['role'] === 'admin')          { $redirect = 'index.php?page=dashboard';             }
+            elseif  ($bestMatch['role'] === 'nutritionniste') { $redirect = 'index.php?page=espace_nutritionniste'; }
+            elseif  ($bestMatch['role'] === 'client')         { $redirect = 'index.php?page=espace_client';         }
+
+            echo json_encode([
+                'success'  => true,
+                'redirect' => $redirect,
+                'prenom'   => $bestMatch['prenom'],
+                'distance' => round($bestDistance, 4)
+            ]);
+        } else {
+            try {
+                $historique = new Historique();
+                $historique->enregistrer(null, 'connexion_faceid', 'echec', 'face_id_attempt');
+            } catch (Exception $e) { /* non bloquant */ }
+            echo json_encode(['success' => false, 'message' => 'Visage non reconnu. Veuillez réessayer ou utiliser votre mot de passe.']);
+        }
         exit;
     }
 }
