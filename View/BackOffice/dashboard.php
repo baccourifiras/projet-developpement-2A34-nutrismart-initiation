@@ -249,6 +249,8 @@
       📋 Historique
     </a>
     <a href="nutrismart_evenement/View/BackOffice/index.php">📅 Événements</a>
+    <a href="NutriSmart/index.php?page=backoffice&action=list">🛒 Boutique (Produits)</a>
+    <a href="NutriSmart/index.php?page=commande&action=list">📦 Commandes</a>
     <a href="index.php?page=accueil">🌐 Voir le site</a>
   </nav>
 

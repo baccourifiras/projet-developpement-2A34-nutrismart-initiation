@@ -143,5 +143,15 @@ class PageController
         $userPrenom = isset($_SESSION['user_prenom']) ? $_SESSION['user_prenom'] : 'Nutritionniste';
         include __DIR__ . '/../View/FrontOffice/espace_nutritionniste.php';
     }
+
+    public function evenements()
+    {
+        if (empty($_SESSION['user_id'])) {
+            header('Location: index.php?page=login&erreur=acces');
+            exit;
+        }
+        header('Location: nutrismart_evenement/View/FrontOffice/index.php');
+        exit;
+    }
 }
 ?>

@@ -40,5 +40,6 @@ elseif  ($page === 'login')                 { $ctrl->login();                 }
 elseif  ($page === 'dashboard')             { $ctrl->dashboard();             }
 elseif  ($page === 'espace_client')         { $ctrl->espace_client();         }
 elseif  ($page === 'espace_nutritionniste') { $ctrl->espace_nutritionniste(); }
+elseif  ($page === 'evenements')            { $ctrl->evenements();            }
 else                                        { $ctrl->accueil();               }
 ?>

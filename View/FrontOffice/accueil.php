@@ -223,23 +223,24 @@
       <a href="index.php?page=accueil" class="active" data-i18n="nav_home">Accueil</a>
 
       <?php if (!empty($_SESSION['user_id'])): ?>
-        <!-- Connecté -->
-        <a href="nutrismart_evenement/View/FrontOffice/index.php" data-i18n="nav_events">Événements</a>
+        <a href="index.php?page=evenements" data-i18n="nav_events">📅 Événements</a>
+        <a href="NutriSmart/index.php?page=frontoffice">🛒 Boutique</a>
 
         <?php
           $espaceUrl = 'index.php?page=espace_client';
           if ($_SESSION['user_role'] === 'nutritionniste') $espaceUrl = 'index.php?page=espace_nutritionniste';
           elseif ($_SESSION['user_role'] === 'admin')      $espaceUrl = 'index.php?page=dashboard';
         ?>
-        <a href="<?php echo $espaceUrl; ?>" class="nav-dashboard" data-i18n="nav_my_space">→ Mon espace</a>
-
-        <?php if ($_SESSION['user_role'] === 'admin'): ?>
-          <a href="index.php?page=dashboard" style="background:linear-gradient(135deg,#1d4ed8,#2563eb)!important;color:#fff!important;">⚙️ Dashboard</a>
-        <?php endif; ?>
 
         <div class="greet-chip" style="display:flex;align-items:center;gap:6px;background:rgba(31,164,99,.1);border:1px solid rgba(31,164,99,.2);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600;color:var(--primary-dark);">
           👤 <?php echo htmlspecialchars($_SESSION['user_prenom']); ?>
         </div>
+
+        <a href="<?php echo $espaceUrl; ?>" class="nav-dashboard" data-i18n="nav_my_space">→ Mon espace</a>
+
+        <?php if ($_SESSION['user_role'] === 'admin' || $_SESSION['user_role'] === 'nutritionniste'): ?>
+          <a href="index.php?page=dashboard" style="background:linear-gradient(135deg,#1d4ed8,#2563eb)!important;color:#fff!important;">⚙️ Dashboard</a>
+        <?php endif; ?>
 
         <form action="index.php" method="POST" style="margin:0;">
           <input type="hidden" name="action" value="deconnexion" />
@@ -247,7 +248,6 @@
         </form>
 
       <?php else: ?>
-        <!-- Non connecté -->
         <a href="index.php?page=inscription" data-i18n="nav_signup">Inscription</a>
         <a href="index.php?page=login" data-i18n="nav_login">Connexion</a>
         <a href="index.php?page=login" class="nav-dashboard" data-i18n="nav_dashboard">→ Mon espace</a>
@@ -272,7 +272,7 @@
 
     <div class="hero-cta">
       <?php if (!empty($_SESSION['user_id'])): ?>
-        <a href="nutrismart_evenement/View/FrontOffice/index.php" class="btn-hero-primary">📅 Voir les événements</a>
+        <a href="index.php?page=evenements" class="btn-hero-primary">📅 Voir les événements</a>
         <?php
           $espaceHero = 'index.php?page=espace_client';
           if ($_SESSION['user_role'] === 'nutritionniste') $espaceHero = 'index.php?page=espace_nutritionniste';
