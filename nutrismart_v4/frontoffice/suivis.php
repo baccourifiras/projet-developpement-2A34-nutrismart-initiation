@@ -30,6 +30,8 @@ $suivis = (new SuiviC())->afficherSuivis();
       <a href="regimes.php">Regimes</a>
       <a href="suivis.php">Suivis</a>
       <a href="recommandations.php">Recommandations</a>
+      <a href="generateur-recettes.php">Recettes IA</a>
+      <a href="analyse-nutrition.php">Analyse Nutrition</a>
       <a href="../backoffice/index.php" class="nav-dashboard">Administration</a>
     </div>
   </nav>

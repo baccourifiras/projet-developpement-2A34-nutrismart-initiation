@@ -1,0 +1,364 @@
+{
+  "info": {
+    "name": "NutriSmart Advanced Features API",
+    "description": "API collection for testing Recipe Generator and Food Analysis features",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Recipe Generator",
+      "item": [
+        {
+          "name": "Generate Recipe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ingredients\": [\"chicken\", \"rice\", \"tomatoes\", \"onions\"],\n  \"dietary_restrictions\": [\"halal\", \"gluten-free\"],\n  \"difficulty\": \"medium\",\n  \"meal_type\": \"lunch\",\n  \"target_calories\": 500\n}"
+            },
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-recipe.php?action=generate",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-recipe.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "generate"
+                }
+              ]
+            },
+            "description": "Generate a new recipe based on ingredients and preferences"
+          }
+        },
+        {
+          "name": "Get Recipe Suggestions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-recipe.php?action=suggest&dietary_restrictions=vegan,gluten-free&difficulty=easy&count=3",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-recipe.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "suggest"
+                },
+                {
+                  "key": "dietary_restrictions",
+                  "value": "vegan,gluten-free"
+                },
+                {
+                  "key": "difficulty",
+                  "value": "easy"
+                },
+                {
+                  "key": "count",
+                  "value": "3"
+                }
+              ]
+            },
+            "description": "Get recipe suggestions based on dietary preferences"
+          }
+        },
+        {
+          "name": "List All Recipes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-recipe.php?action=list&limit=20&offset=0",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-recipe.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "list"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "List all recipes with pagination"
+          }
+        },
+        {
+          "name": "Get Recipe by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-recipe.php?action=show&id=1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-recipe.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "show"
+                },
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Get a specific recipe by ID"
+          }
+        },
+        {
+          "name": "Search Recipes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-recipe.php?action=list&search=chicken&difficulty=easy",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-recipe.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "list"
+                },
+                {
+                  "key": "search",
+                  "value": "chicken"
+                },
+                {
+                  "key": "difficulty",
+                  "value": "easy"
+                }
+              ]
+            },
+            "description": "Search recipes by keyword and filters"
+          }
+        },
+        {
+          "name": "Filter by Calorie Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-recipe.php?action=list&min_calories=400&max_calories=600",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-recipe.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "list"
+                },
+                {
+                  "key": "min_calories",
+                  "value": "400"
+                },
+                {
+                  "key": "max_calories",
+                  "value": "600"
+                }
+              ]
+            },
+            "description": "Filter recipes by calorie range"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Food Analysis",
+      "item": [
+        {
+          "name": "Analyze Food Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "/path/to/your/food-image.jpg"
+                },
+                {
+                  "key": "meal_type",
+                  "value": "lunch",
+                  "type": "text"
+                },
+                {
+                  "key": "user_id",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-food-analysis.php?action=analyze",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-food-analysis.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "analyze"
+                }
+              ]
+            },
+            "description": "Analyze a food image to detect ingredients and nutrition"
+          }
+        },
+        {
+          "name": "Scan Barcode - Nutella",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-food-analysis.php?action=barcode&code=3017620422003",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-food-analysis.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "barcode"
+                },
+                {
+                  "key": "code",
+                  "value": "3017620422003",
+                  "description": "Nutella barcode"
+                }
+              ]
+            },
+            "description": "Scan a product barcode to get nutritional information"
+          }
+        },
+        {
+          "name": "Scan Barcode - Coca Cola",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-food-analysis.php?action=barcode&code=5449000000996",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-food-analysis.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "barcode"
+                },
+                {
+                  "key": "code",
+                  "value": "5449000000996",
+                  "description": "Coca-Cola barcode"
+                }
+              ]
+            },
+            "description": "Scan Coca-Cola barcode"
+          }
+        },
+        {
+          "name": "Get Analysis History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-food-analysis.php?action=history&user_id=1&limit=50",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-food-analysis.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "history"
+                },
+                {
+                  "key": "user_id",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Get analysis history for a user"
+          }
+        },
+        {
+          "name": "Get Daily Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-food-analysis.php?action=daily&date=2024-01-15&user_id=1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-food-analysis.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "daily"
+                },
+                {
+                  "key": "date",
+                  "value": "2024-01-15"
+                },
+                {
+                  "key": "user_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Get daily calorie summary for a specific date"
+          }
+        },
+        {
+          "name": "Estimate Portion Size",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "/path/to/your/food-image.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost/nutrismart/Controller/api-food-analysis.php?action=portion",
+              "protocol": "http",
+              "host": ["localhost"],
+              "path": ["nutrismart", "Controller", "api-food-analysis.php"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "portion"
+                }
+              ]
+            },
+            "description": "Estimate portion sizes from a food image"
+          }
+        }
+      ]
+    }
+  ]
+}

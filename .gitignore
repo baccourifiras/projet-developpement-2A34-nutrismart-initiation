@@ -1,0 +1,59 @@
+# NutriSmart - Git Ignore File
+
+# Environment and Configuration
+.env
+Config/config.php
+
+# Uploads and User Data
+uploads/
+uploads/food-images/*
+!uploads/food-images/.gitkeep
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+error_log
+debug.log
+
+# Temporary Files
+tmp/
+temp/
+cache/
+
+# Database Backups
+*.sql.backup
+*.sql.gz
+database/backups/
+
+# Composer (if used)
+vendor/
+composer.lock
+
+# Node Modules (if used)
+node_modules/
+package-lock.json
+
+# Build Files
+dist/
+build/
+
+# OS Files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# PHP
+*.cache
+.phpunit.result.cache
+
+# Sensitive Data
+api_keys.txt
+credentials.txt
+secrets.txt
